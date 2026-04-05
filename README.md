@@ -112,20 +112,6 @@ Black Path Game
 
 ---
 
-## スクリーンショット
-
-> **Note:** 以下は想定されるスクリーンショットの配置です。`docs/screenshots/` にファイルを配置してください。
-
-| 画面 | ファイル |
-|------|----------|
-| プレイ中 | `docs/screenshots/gameplay.png` |
-| タイル選択 | `docs/screenshots/tile-picker.png` |
-| ゲームオーバー | `docs/screenshots/game-over.png` |
-| AI 対戦 | `docs/screenshots/vs-ai.png` |
-| リプレイ | `docs/screenshots/replay.png` |
-
----
-
 ## 技術スタック
 
 | カテゴリ | 技術 |
