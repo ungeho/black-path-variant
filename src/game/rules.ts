@@ -2,7 +2,6 @@ import type { CellCoord, Direction, Tile, TileType } from './types';
 import {
   BOARD_ROWS,
   BOARD_COLS,
-  MISSING_CELL,
   OPPOSITE_DIRECTION,
   DIRECTION_DELTA,
   TILE_PATHS,
@@ -11,17 +10,20 @@ import {
 
 // ─── Coordinate helpers ───────────────────────────────────
 
-export function isOutOfBounds(coord: CellCoord): boolean {
+export function isOutOfBounds(coord: CellCoord, boardSize?: number): boolean {
+  const rows = boardSize ?? BOARD_ROWS;
+  const cols = boardSize ?? BOARD_COLS;
   return (
     coord.row < 0 ||
-    coord.row >= BOARD_ROWS ||
+    coord.row >= rows ||
     coord.col < 0 ||
-    coord.col >= BOARD_COLS
+    coord.col >= cols
   );
 }
 
-export function isMissingCell(coord: CellCoord): boolean {
-  return coord.row === MISSING_CELL.row && coord.col === MISSING_CELL.col;
+export function isMissingCell(coord: CellCoord, boardSize?: number): boolean {
+  const s = boardSize ?? BOARD_ROWS;
+  return coord.row === s - 1 && coord.col === s - 1;
 }
 
 export function coordsEqual(a: CellCoord, b: CellCoord): boolean {

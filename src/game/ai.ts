@@ -1,6 +1,6 @@
 import type { GameState, Move, Player } from './types';
 import { applyMove, getExitFromHead } from './engine';
-import { BOARD_ROWS, BOARD_COLS, MISSING_CELL } from './constants';
+import type { CellCoord } from './types';
 
 // ─── Public API ──────────────────────────────────────────
 
@@ -218,28 +218,30 @@ function evaluate(state: GameState, aiPlayer: Player, ply: number): number {
 
   let score = 0;
 
-  const { pathHead } = state;
+  const { pathHead, boardSize } = state;
+  const maxIdx = boardSize - 1;
+  const missingCell: CellCoord = { row: maxIdx, col: maxIdx };
 
   // 1. Distance to nearest edge — closer = more dangerous for current player.
   const distToNearestEdge = Math.min(
     pathHead.row,
     pathHead.col,
-    BOARD_ROWS - 1 - pathHead.row,
-    BOARD_COLS - 1 - pathHead.col,
+    maxIdx - pathHead.row,
+    maxIdx - pathHead.col,
   );
   score += sign * (5 - distToNearestEdge) * 15;
 
-  // 2. Distance to missing cell (7,7).
+  // 2. Distance to missing cell.
   const distToMissing =
-    Math.abs(pathHead.row - MISSING_CELL.row) +
-    Math.abs(pathHead.col - MISSING_CELL.col);
+    Math.abs(pathHead.row - missingCell.row) +
+    Math.abs(pathHead.col - missingCell.col);
   score += sign * Math.max(0, 6 - distToMissing) * 12;
 
   // 3. Exit direction — steps to board edge in the exit direction.
   const exitDir = getExitFromHead(state);
   if (exitDir) {
-    const steps = stepsToEdge(pathHead, exitDir);
-    score += sign * (8 - steps) * 18;
+    const steps = stepsToEdge(pathHead, exitDir, boardSize);
+    score += sign * (boardSize - steps) * 18;
 
     // Extra penalty if exit points directly off the board (1 step away).
     if (steps <= 1) {
@@ -247,9 +249,10 @@ function evaluate(state: GameState, aiPlayer: Player, ply: number): number {
     }
   }
 
-  // 4. Corner (7,7) proximity — extremely dangerous zone.
-  if (pathHead.row >= 5 && pathHead.col >= 5) {
-    const cornerDist = (7 - pathHead.row) + (7 - pathHead.col);
+  // 4. Missing cell corner proximity — extremely dangerous zone.
+  const cornerThreshold = Math.max(3, boardSize - 3);
+  if (pathHead.row >= cornerThreshold && pathHead.col >= cornerThreshold) {
+    const cornerDist = (maxIdx - pathHead.row) + (maxIdx - pathHead.col);
     score += sign * (4 - cornerDist) * 25;
   }
 
@@ -270,11 +273,13 @@ function evaluate(state: GameState, aiPlayer: Player, ply: number): number {
 function stepsToEdge(
   head: { row: number; col: number },
   dir: 'up' | 'down' | 'left' | 'right',
+  boardSize: number,
 ): number {
+  const maxIdx = boardSize - 1;
   switch (dir) {
     case 'up':    return head.row;
-    case 'down':  return BOARD_ROWS - 1 - head.row;
+    case 'down':  return maxIdx - head.row;
     case 'left':  return head.col;
-    case 'right': return BOARD_COLS - 1 - head.col;
+    case 'right': return maxIdx - head.col;
   }
 }

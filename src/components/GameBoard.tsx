@@ -1,8 +1,6 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import type { GameState, Move, TileType, CellCoord, Direction } from '../game';
 import {
-  BOARD_ROWS,
-  BOARD_COLS,
   ALL_TILE_TYPES,
   getExitFromHead,
   getOppositeDirection,
@@ -21,7 +19,7 @@ interface GameBoardProps {
 const EMPTY_DIRECTIONS: Direction[] = [];
 
 export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
-  const { board, legalMoves, pathHead, moveHistory, pathCoords } = state;
+  const { board, legalMoves, pathHead, moveHistory, pathCoords, boardSize } = state;
 
   // ── Selected cell for tile picker ──
   const [selectedCell, setSelectedCell] = useState<CellCoord | null>(null);
@@ -152,8 +150,8 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
 
   // Build cell elements.
   const cells = [];
-  for (let row = 0; row < BOARD_ROWS; row++) {
-    for (let col = 0; col < BOARD_COLS; col++) {
+  for (let row = 0; row < boardSize; row++) {
+    for (let col = 0; col < boardSize; col++) {
       const key = `${row},${col}`;
       const isHead = row === pathHead.row && col === pathHead.col;
       cells.push(
@@ -169,6 +167,8 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
           pathDirections={pathDirectionsMap.get(key) ?? EMPTY_DIRECTIONS}
           exitArrowDir={isHead ? exitArrowDir : null}
           onCellClick={handleCellClick}
+          isStart={row === 0 && col === 0}
+          isMissing={row === boardSize - 1 && col === boardSize - 1}
         />,
       );
     }
@@ -177,7 +177,7 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
   // Build column labels (top row).
   const colLabels = [];
   colLabels.push(<div key="corner" className={styles.corner} />);
-  for (let col = 0; col < BOARD_COLS; col++) {
+  for (let col = 0; col < boardSize; col++) {
     colLabels.push(
       <div key={`col-${col}`} className={styles.colLabel}>{col}</div>,
     );
@@ -185,7 +185,7 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
 
   // Build row labels (left column).
   const rowLabels = [];
-  for (let row = 0; row < BOARD_ROWS; row++) {
+  for (let row = 0; row < boardSize; row++) {
     rowLabels.push(
       <div
         key={`row-${row}`}
@@ -197,48 +197,58 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
     );
   }
 
-  // ── Path overlay polyline ──
-  const pathLine = useMemo(() => {
-    if (pathCoords.length < 2) return null;
-    // Each cell is 68px. Center of cell (row, col) = (col * 68 + 34, row * 68 + 34).
-    const points = pathCoords.map(
-      (c) => `${c.col * 68 + 34},${c.row * 68 + 34}`,
-    ).join(' ');
-    return points;
-  }, [pathCoords]);
+  // Compute inline picker position relative to the board.
+  const pickerPosition = useMemo(() => {
+    if (!selectedCell) return null;
+    const cellSize = boardSize <= 6 ? 68 : boardSize <= 8 ? 68 : 52;
+    const pickerWidth = 220;
+    let left = selectedCell.col * cellSize + cellSize / 2 - pickerWidth / 2;
+    let top = (selectedCell.row + 1) * cellSize + 4;
+    const boardWidth = boardSize * cellSize;
+    if (left + pickerWidth > boardWidth) left = boardWidth - pickerWidth;
+    if (left < 0) left = 0;
+    const boardHeight = boardSize * cellSize;
+    if (top + 90 > boardHeight) {
+      top = selectedCell.row * cellSize - 90;
+    }
+    return { top, left };
+  }, [selectedCell, boardSize]);
+
+  const cellSize = boardSize <= 8 ? 68 : 52;
 
   return (
     <>
-      <div className={styles.wrapper}>
+      <div
+        className={styles.wrapper}
+        style={{
+          gridTemplateColumns: `24px repeat(${boardSize}, ${cellSize}px)`,
+          gridTemplateRows: `24px repeat(${boardSize}, ${cellSize}px)`,
+        }}
+      >
         {colLabels}
         {rowLabels}
-        <div className={styles.board}>
+        <div
+          className={styles.board}
+          style={{
+            gridTemplateColumns: `repeat(${boardSize}, ${cellSize}px)`,
+            gridTemplateRows: `repeat(${boardSize}, ${cellSize}px)`,
+          }}
+        >
           {cells}
-          {pathLine && (
-            <svg
-              className={styles.pathOverlay}
-              viewBox={`0 0 ${BOARD_COLS * 68} ${BOARD_ROWS * 68}`}
-            >
-              <polyline
-                points={pathLine}
-                fill="none"
-                stroke="var(--accent)"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.35"
-              />
-            </svg>
+          {selectedCell && entryFromForLegal && pickerPosition && (
+            <TilePicker
+              entryFrom={entryFromForLegal}
+              currentPlayer={state.currentPlayer}
+              onSelect={handleTileSelect}
+              onCancel={handlePickerCancel}
+              style={{ position: 'absolute', top: pickerPosition.top, left: pickerPosition.left, zIndex: 10 }}
+            />
           )}
         </div>
       </div>
-      {selectedCell && entryFromForLegal && (
-        <TilePicker
-          entryFrom={entryFromForLegal}
-          currentPlayer={state.currentPlayer}
-          onSelect={handleTileSelect}
-          onCancel={handlePickerCancel}
-        />
+      {/* Backdrop to close picker on outside click */}
+      {selectedCell && (
+        <div className={styles.pickerBackdrop} onClick={handlePickerCancel} />
       )}
     </>
   );

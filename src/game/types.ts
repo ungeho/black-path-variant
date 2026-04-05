@@ -73,6 +73,8 @@ export interface GameResult {
 
 export interface GameState {
   board: Board;
+  /** Board size (always square: N×N). */
+  boardSize: number;
   currentPlayer: Player;
   /** The cell the path tip is currently at. */
   pathHead: CellCoord;

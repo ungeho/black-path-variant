@@ -1,5 +1,5 @@
-import type { GameMode, PlayerSide, TurnTimeLimit } from '../App';
-import { TURN_TIME_OPTIONS } from '../App';
+import type { GameMode, PlayerSide, TurnTimeLimit, BoardSizeOption } from '../App';
+import { TURN_TIME_OPTIONS, BOARD_SIZE_OPTIONS } from '../App';
 import type { AIDifficulty } from '../game';
 import styles from './ControlPanel.module.css';
 
@@ -12,10 +12,14 @@ interface ControlPanelProps {
   onSideChange: (side: PlayerSide) => void;
   turnTimeLimit: TurnTimeLimit;
   onTimeLimitChange: (limit: TurnTimeLimit) => void;
+  boardSize: BoardSizeOption;
+  onBoardSizeChange: (size: BoardSizeOption) => void;
   onRestart: () => void;
   canUndo: boolean;
   onUndo: () => void;
   onHelp: () => void;
+  muted: boolean;
+  onToggleMute: () => void;
 }
 
 const MODE_LABELS: Record<GameMode, string> = {
@@ -47,10 +51,14 @@ export function ControlPanel({
   onSideChange,
   turnTimeLimit,
   onTimeLimitChange,
+  boardSize,
+  onBoardSizeChange,
   onRestart,
   canUndo,
   onUndo,
   onHelp,
+  muted,
+  onToggleMute,
 }: ControlPanelProps) {
   return (
     <div className={styles.panel}>
@@ -80,8 +88,17 @@ export function ControlPanel({
         )}
       </div>
 
-      {/* Row 2: timer + actions */}
+      {/* Row 2: board size + timer + actions */}
       <div className={styles.row}>
+        <div className={styles.timerGroup}>
+          <span className={styles.timerLabel}>盤面:</span>
+          <ButtonGroup
+            items={[...BOARD_SIZE_OPTIONS]}
+            active={boardSize}
+            label={(s) => `${s}×${s}`}
+            onChange={onBoardSizeChange}
+          />
+        </div>
         <div className={styles.timerGroup}>
           <span className={styles.timerLabel}>制限時間:</span>
           <ButtonGroup
@@ -96,6 +113,13 @@ export function ControlPanel({
         </button>
         <button className={styles.button} onClick={onUndo} disabled={!canUndo}>
           一手戻す
+        </button>
+        <button
+          className={`${styles.button} ${styles.helpButton}`}
+          onClick={onToggleMute}
+          title={muted ? 'サウンドON' : 'サウンドOFF'}
+        >
+          {muted ? '🔇' : '🔊'}
         </button>
         <button className={`${styles.button} ${styles.helpButton}`} onClick={onHelp}>
           ?

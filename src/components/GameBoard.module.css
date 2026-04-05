@@ -1,7 +1,6 @@
 .wrapper {
   display: inline-grid;
-  grid-template-columns: 24px repeat(8, 68px);
-  grid-template-rows: 24px repeat(8, 68px);
+  /* grid-template-columns/rows set via inline style for dynamic board size */
   gap: 0;
   user-select: none;
 }
@@ -24,38 +23,24 @@
 .board {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(8, 68px);
-  grid-template-rows: repeat(8, 68px);
+  /* grid-template-columns/rows set via inline style */
   grid-column: 2 / -1;
   grid-row: 2 / -1;
   border: 2px solid var(--border);
   border-radius: 4px;
-  overflow: hidden;
+  overflow: visible;
   background: var(--cell-border);
 }
 
-.pathOverlay {
-  position: absolute;
+.pickerBackdrop {
+  position: fixed;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 3;
+  z-index: 5;
 }
 
 @media (max-width: 700px) {
-  .wrapper {
-    grid-template-columns: 18px repeat(8, 42px);
-    grid-template-rows: 18px repeat(8, 42px);
-  }
-
   .colLabel,
   .rowLabel {
     font-size: 0.5625rem;
-  }
-
-  .board {
-    grid-template-columns: repeat(8, 42px);
-    grid-template-rows: repeat(8, 42px);
   }
 }

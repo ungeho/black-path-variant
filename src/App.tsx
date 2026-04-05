@@ -6,6 +6,7 @@ import { HUD } from './components/HUD';
 import { ControlPanel } from './components/ControlPanel';
 import { HelpModal } from './components/HelpModal';
 import { useRecord } from './hooks/useRecord';
+import { useSound } from './hooks/useSound';
 import './App.css';
 
 export type GameMode = 'pvp' | 'pve';
@@ -20,6 +21,10 @@ const TURN_TIME_OPTIONS = [0, 10, 20, 30, 60] as const;
 export type TurnTimeLimit = (typeof TURN_TIME_OPTIONS)[number];
 export { TURN_TIME_OPTIONS };
 
+const BOARD_SIZE_OPTIONS = [6, 8, 10] as const;
+export type BoardSizeOption = (typeof BOARD_SIZE_OPTIONS)[number];
+export { BOARD_SIZE_OPTIONS };
+
 interface AppState {
   current: GameState;
   history: GameState[];
@@ -28,7 +33,7 @@ interface AppState {
 type Action =
   | { type: 'move'; move: Move }
   | { type: 'undo' }
-  | { type: 'restart' }
+  | { type: 'restart'; boardSize?: number }
   | { type: 'timeout' };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -65,12 +70,12 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
     case 'restart':
-      return createAppState();
+      return createAppState(action.boardSize);
   }
 }
 
-function createAppState(): AppState {
-  return { current: createInitialState(), history: [] };
+function createAppState(boardSize?: number): AppState {
+  return { current: createInitialState(boardSize), history: [] };
 }
 
 export default function App() {
@@ -79,9 +84,14 @@ export default function App() {
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [playerSide, setPlayerSide] = useState<PlayerSide>('first');
   const [turnTimeLimit, setTurnTimeLimit] = useState<TurnTimeLimit>(0);
+  const [boardSizeOption, setBoardSizeOption] = useState<BoardSizeOption>(8);
   const [showHelp, setShowHelp] = useState(false);
+  const [replayMoves, setReplayMoves] = useState<Move[] | null>(null);
+  const [replayStep, setReplayStep] = useState(0);
+  const [replayPlaying, setReplayPlaying] = useState(false);
   const gameState = state.current;
   const { getRecord, addResult } = useRecord();
+  const sound = useSound();
 
   // Determine which player is AI.
   const aiPlayer: Player | null = mode === 'pve'
@@ -98,13 +108,15 @@ export default function App() {
       if (mode === 'pve' && aiPlayer) {
         const humanWon = gameState.result.winner !== aiPlayer;
         addResult(recordKey, humanWon ? 'win' : 'loss');
+        if (humanWon) sound.gameWin(); else sound.gameLose();
       } else {
         // PvP: record from player1 perspective
         addResult(recordKey, gameState.result.winner === 'player1' ? 'win' : 'loss');
+        sound.gameWin();
       }
     }
     prevPhaseRef.current = gameState.phase;
-  }, [gameState.phase, gameState.result, mode, aiPlayer, recordKey, addResult]);
+  }, [gameState.phase, gameState.result, mode, aiPlayer, recordKey, addResult, sound]);
 
   // ── Auto-follow animation ──
   const { autoFollowCount, pathCoords } = gameState;
@@ -179,6 +191,40 @@ export default function App() {
 
   const turnRemaining = turnTimeLimit > 0 ? Math.max(0, turnTimeLimit - turnElapsed) : null;
 
+  // ── Replay ──
+  const replayState = useMemo((): GameState | null => {
+    if (!replayMoves) return null;
+    let s = createInitialState(gameState.boardSize);
+    for (let i = 0; i < replayStep; i++) {
+      s = applyMove(s, replayMoves[i]);
+    }
+    return s;
+  }, [replayMoves, replayStep, gameState.boardSize]);
+
+  const handleStartReplay = useCallback(() => {
+    setReplayMoves(gameState.moveHistory);
+    setReplayStep(0);
+    setReplayPlaying(false);
+  }, [gameState.moveHistory]);
+
+  const handleStopReplay = useCallback(() => {
+    setReplayMoves(null);
+    setReplayStep(0);
+    setReplayPlaying(false);
+  }, []);
+
+  useEffect(() => {
+    if (!replayPlaying || !replayMoves) return;
+    if (replayStep >= replayMoves.length) {
+      setReplayPlaying(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setReplayStep((s) => s + 1);
+    }, AUTO_FOLLOW_STEP_MS);
+    return () => clearTimeout(timer);
+  }, [replayPlaying, replayStep, replayMoves]);
+
   // ── Display state (with animation truncation) ──
   const displayState = useMemo((): GameState => {
     if (!isAnimating) return gameState;
@@ -198,11 +244,39 @@ export default function App() {
     return displayState;
   }, [displayState, isAITurn]);
 
+  // ── Sound: play on move ──
+  const prevMoveCountRef = useRef(moveCount);
+  useEffect(() => {
+    if (moveCount > prevMoveCountRef.current) {
+      sound.placeTile();
+    }
+    prevMoveCountRef.current = moveCount;
+  }, [moveCount, sound]);
+
+  // ── Sound: timer warning at ≤5s ──
+  const prevRemainingRef = useRef(turnRemaining);
+  useEffect(() => {
+    if (
+      turnRemaining !== null &&
+      turnRemaining <= 5 &&
+      turnRemaining > 0 &&
+      prevRemainingRef.current !== turnRemaining
+    ) {
+      sound.timerWarning();
+    }
+    prevRemainingRef.current = turnRemaining;
+  }, [turnRemaining, sound]);
+
   const handleMove = useCallback(
     (move: Move) => dispatch({ type: 'move', move }),
     [],
   );
-  const handleRestart = useCallback(() => dispatch({ type: 'restart' }), []);
+  const handleRestart = useCallback(() => {
+    setReplayMoves(null);
+    setReplayStep(0);
+    setReplayPlaying(false);
+    dispatch({ type: 'restart', boardSize: boardSizeOption });
+  }, [boardSizeOption]);
   const handleUndo = useCallback(() => {
     // In PvE, undo two moves (player + AI) if possible.
     if (mode === 'pve' && state.history.length >= 2) {
@@ -214,28 +288,53 @@ export default function App() {
   }, [mode, state.history.length]);
   const handleModeChange = useCallback((newMode: GameMode) => {
     setMode(newMode);
-    dispatch({ type: 'restart' });
-  }, []);
+    dispatch({ type: 'restart', boardSize: boardSizeOption });
+  }, [boardSizeOption]);
   const handleSideChange = useCallback((side: PlayerSide) => {
     setPlayerSide(side);
-    dispatch({ type: 'restart' });
-  }, []);
+    dispatch({ type: 'restart', boardSize: boardSizeOption });
+  }, [boardSizeOption]);
   const handleTimeLimitChange = useCallback((limit: TurnTimeLimit) => {
     setTurnTimeLimit(limit);
-    dispatch({ type: 'restart' });
+    dispatch({ type: 'restart', boardSize: boardSizeOption });
+  }, [boardSizeOption]);
+  const handleBoardSizeChange = useCallback((size: BoardSizeOption) => {
+    setBoardSizeOption(size);
+    dispatch({ type: 'restart', boardSize: size });
   }, []);
 
   return (
     <div className="app">
       <h1 className="title">Black Path Game</h1>
       <HUD
-        state={displayState}
+        state={replayState ?? displayState}
         aiThinking={aiThinking}
         turnRemaining={turnRemaining}
         aiPlayer={aiPlayer}
         record={record}
+        onRestart={handleRestart}
+        replay={replayMoves ? {
+          step: replayStep,
+          total: replayMoves.length,
+          playing: replayPlaying,
+          onStart: handleStartReplay,
+          onStop: handleStopReplay,
+          onPrev: () => setReplayStep((s) => Math.max(0, s - 1)),
+          onNext: () => setReplayStep((s) => Math.min(replayMoves.length, s + 1)),
+          onTogglePlay: () => setReplayPlaying((p) => !p),
+        } : {
+          step: 0,
+          total: gameState.moveHistory.length,
+          playing: false,
+          onStart: handleStartReplay,
+          onStop: handleStopReplay,
+          onPrev: () => {},
+          onNext: () => {},
+          onTogglePlay: () => {},
+        }}
+        isReplaying={replayMoves !== null}
       />
-      <GameBoard state={interactiveState} onMove={handleMove} onUndo={handleUndo} />
+      <GameBoard state={replayState ?? interactiveState} onMove={handleMove} onUndo={handleUndo} />
       <ControlPanel
         mode={mode}
         onModeChange={handleModeChange}
@@ -245,10 +344,14 @@ export default function App() {
         onSideChange={handleSideChange}
         turnTimeLimit={turnTimeLimit}
         onTimeLimitChange={handleTimeLimitChange}
+        boardSize={boardSizeOption}
+        onBoardSizeChange={handleBoardSizeChange}
         onRestart={handleRestart}
         canUndo={state.history.length > 0 && !isAnimating && !isAITurn}
         onUndo={handleUndo}
         onHelp={() => setShowHelp(true)}
+        muted={sound.muted}
+        onToggleMute={sound.toggleMute}
       />
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>

@@ -60,8 +60,8 @@ function getPlayingMoves(state: GameState): Move[] {
   const nextCoord = getNextCoord(pathHead, exitDir);
 
   // Terminal checks.
-  if (isOutOfBounds(nextCoord)) return [];
-  if (isMissingCell(nextCoord)) return [];
+  if (isOutOfBounds(nextCoord, state.boardSize)) return [];
+  if (isMissingCell(nextCoord, state.boardSize)) return [];
 
   const cell = board[nextCoord.row][nextCoord.col];
 

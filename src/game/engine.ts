@@ -12,9 +12,7 @@ import type {
 } from './types';
 import {
   BOARD_ROWS,
-  BOARD_COLS,
   START_CELL,
-  MISSING_CELL,
 } from './constants';
 import {
   coordsEqual,
@@ -30,10 +28,11 @@ import { getLegalMoves } from './moveGenerator';
 
 // ─── State creation ───────────────────────────────────────
 
-export function createInitialState(): GameState {
-  const board = createEmptyBoard();
+export function createInitialState(boardSize: number = BOARD_ROWS): GameState {
+  const board = createEmptyBoard(boardSize);
   const state: GameState = {
     board,
+    boardSize,
     currentPlayer: 'player1',
     pathHead: START_CELL,
     incomingDirection: null,
@@ -48,15 +47,16 @@ export function createInitialState(): GameState {
   return state;
 }
 
-function createEmptyBoard(): Board {
+function createEmptyBoard(boardSize: number): Board {
+  const missingCell: CellCoord = { row: boardSize - 1, col: boardSize - 1 };
   const board: Board = [];
-  for (let row = 0; row < BOARD_ROWS; row++) {
+  for (let row = 0; row < boardSize; row++) {
     const rowCells: BoardCell[] = [];
-    for (let col = 0; col < BOARD_COLS; col++) {
+    for (let col = 0; col < boardSize; col++) {
       const coord: CellCoord = { row, col };
       let cellState: BoardCell['state'] = 'empty';
       if (coordsEqual(coord, START_CELL)) cellState = 'start';
-      if (coordsEqual(coord, MISSING_CELL)) cellState = 'missing';
+      if (coordsEqual(coord, missingCell)) cellState = 'missing';
 
       // Pre-place a cross tile on the start cell.
       const tile: Tile | null = cellState === 'start'
@@ -131,13 +131,14 @@ export function applyMove(prevState: GameState, move: Move): GameState {
   if (exitDir === null) return prevState;
 
   // ── 4. Auto-follow through existing tiles ──
-  const follow = autoFollow(board, move.coord, entryFrom, exitDir, pathCoords);
+  const follow = autoFollow(board, move.coord, entryFrom, exitDir, pathCoords, prevState.boardSize);
 
   // ── 5. Build new state ──
   const nextPlayer = prevState.currentPlayer === 'player1' ? 'player2' : 'player1';
 
   const newState: GameState = {
     board: follow.board,
+    boardSize: prevState.boardSize,
     currentPlayer: nextPlayer,
     pathHead: follow.pathHead,
     incomingDirection: follow.incomingDirection,
@@ -179,6 +180,7 @@ function autoFollow(
   headEntryFrom: Direction,
   headExitDir: Direction,
   pathCoords: CellCoord[],
+  boardSize: number,
 ): FollowResult {
   let head = currentHead;
   let entryFrom = headEntryFrom;
@@ -190,7 +192,7 @@ function autoFollow(
     const nextCoord = getNextCoord(head, exitDir);
 
     // Stop if out of bounds or missing cell.
-    if (isOutOfBounds(nextCoord) || isMissingCell(nextCoord)) break;
+    if (isOutOfBounds(nextCoord, boardSize) || isMissingCell(nextCoord, boardSize)) break;
 
     const cell = board[nextCoord.row][nextCoord.col];
     if (!cell.tile) break; // Empty cell — player must place a tile.
@@ -290,10 +292,10 @@ export function evaluateTerminal(state: GameState): GameResult | null {
 
   const nextCoord = getNextCoord(state.pathHead, exitDir);
 
-  if (isOutOfBounds(nextCoord)) {
+  if (isOutOfBounds(nextCoord, state.boardSize)) {
     return { winner, reason: 'out_of_bounds' };
   }
-  if (isMissingCell(nextCoord)) {
+  if (isMissingCell(nextCoord, state.boardSize)) {
     return { winner, reason: 'missing_cell' };
   }
 

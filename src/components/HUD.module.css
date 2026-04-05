@@ -134,7 +134,13 @@
   to { opacity: 0.4; }
 }
 
-/* ─── Move count ─── */
+/* ─── Stats (compact, in status bar) ─── */
+
+.statsCompact {
+  display: flex;
+  gap: 14px;
+  flex-shrink: 0;
+}
 
 .moveCount {
   display: flex;
@@ -216,4 +222,95 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--text);
+}
+
+.restartButton {
+  margin-top: 8px;
+  padding: 8px 28px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.restartButton:hover {
+  opacity: 0.85;
+}
+
+/* ─── Result actions row ─── */
+
+.resultActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.resultActions .restartButton {
+  margin-top: 0;
+}
+
+.replayStartButton {
+  padding: 8px 28px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-light);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.replayStartButton:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ─── Replay bar ─── */
+
+.replayBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.replayBtn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-light);
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.replayBtn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+.replayBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.replayProgress {
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  margin-left: 8px;
 }

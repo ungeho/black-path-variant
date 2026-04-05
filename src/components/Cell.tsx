@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { BoardCell, TileType, Direction, Tile } from '../game';
-import { TILE_PATHS, START_CELL, MISSING_CELL } from '../game';
+import { TILE_PATHS } from '../game';
 import { directionToPoint, arcPathD } from './tileSvg';
 import styles from './Cell.module.css';
 
@@ -15,6 +15,8 @@ interface CellProps {
   pathDirections: Direction[];
   exitArrowDir: Direction | null;
   onCellClick: (row: number, col: number) => void;
+  isStart: boolean;
+  isMissing: boolean;
 }
 
 function CellComponent({
@@ -28,9 +30,9 @@ function CellComponent({
   pathDirections,
   exitArrowDir,
   onCellClick,
+  isStart,
+  isMissing,
 }: CellProps) {
-  const isMissing = row === MISSING_CELL.row && col === MISSING_CELL.col;
-  const isStart = row === START_CELL.row && col === START_CELL.col;
 
   if (isMissing) {
     return (
