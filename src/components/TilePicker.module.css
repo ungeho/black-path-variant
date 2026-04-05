@@ -1,0 +1,77 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.picker {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.options {
+  display: flex;
+  gap: 12px;
+}
+
+.option {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--cell-bg);
+  cursor: pointer;
+  padding: 6px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.option:hover {
+  border-color: var(--accent);
+  transform: scale(1.08);
+}
+
+.optionSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.shortcutHint {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0.6;
+  pointer-events: none;
+}

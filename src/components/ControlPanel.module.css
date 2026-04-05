@@ -1,0 +1,93 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 16px;
+  max-width: 580px;
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modeGroup {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.modeButton {
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  background: var(--surface-light);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.modeButton + .modeButton {
+  border-left: 1px solid var(--border);
+}
+
+.modeButton:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.modeActive {
+  background: var(--accent);
+  color: #fff;
+}
+
+.modeActive:hover {
+  background: var(--accent);
+}
+
+.timerGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timerLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.button {
+  padding: 5px 14px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-light);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+.button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.helpButton {
+  padding: 5px 10px;
+  font-weight: 800;
+  border-radius: 50%;
+  min-width: 30px;
+}

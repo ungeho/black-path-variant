@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npx:*)",
+      "Bash(cp -r temp-proj/* .)",
+      "Bash(cp temp-proj/.gitignore .)",
+      "Bash(rm -rf temp-proj)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(node -e ':*)",
+      "WebFetch(domain:en.wikipedia.org)"
+    ]
+  }
+}
