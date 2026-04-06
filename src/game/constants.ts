@@ -8,8 +8,6 @@ export const BOARD_COLS = 8;
 // ─── Special cells ────────────────────────────────────────
 
 export const START_CELL: CellCoord = { row: 0, col: 0 };
-export const MISSING_CELL: CellCoord = { row: 7, col: 7 };
-
 // ─── Direction helpers ────────────────────────────────────
 
 export const ALL_DIRECTIONS: readonly Direction[] = [

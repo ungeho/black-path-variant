@@ -9,6 +9,8 @@ import type {
   Move,
   Player,
   Tile,
+  Trap,
+  TileType,
 } from './types';
 import {
   BOARD_ROWS,
@@ -28,35 +30,127 @@ import { getLegalMoves } from './moveGenerator';
 
 // ─── State creation ───────────────────────────────────────
 
-export function createInitialState(boardSize: number = BOARD_ROWS): GameState {
-  const board = createEmptyBoard(boardSize);
+export function createInitialState(
+  boardSize: number = BOARD_ROWS,
+  missingCount: number = 0,
+  trapLimit: number = 0,
+): GameState {
+  const board = createEmptyBoard(boardSize, missingCount);
+  const phase: GamePhase = trapLimit > 0 ? 'trapping' : 'opening';
   const state: GameState = {
     board,
     boardSize,
     currentPlayer: 'player1',
     pathHead: START_CELL,
     incomingDirection: null,
-    phase: 'opening',
+    phase,
     result: null,
     legalMoves: [],
     moveHistory: [],
     pathCoords: [{ ...START_CELL }],
     autoFollowCount: 0,
+    traps: [],
+    trapLimit,
   };
-  state.legalMoves = getLegalMoves(state);
+  if (phase === 'opening') {
+    state.legalMoves = getLegalMoves(state);
+  }
   return state;
 }
 
-function createEmptyBoard(boardSize: number): Board {
-  const missingCell: CellCoord = { row: boardSize - 1, col: boardSize - 1 };
+// ─── Trap placement ──────────────────────────────────────
+
+export function placeTrap(
+  state: GameState,
+  coord: CellCoord,
+  blockedTile: TileType,
+): GameState {
+  if (state.phase !== 'trapping') return state;
+  const player = state.currentPlayer;
+
+  // Can't place on start or missing cells.
+  const cell = state.board[coord.row][coord.col];
+  if (cell.state === 'start' || cell.state === 'missing') return state;
+
+  // Check limit for this player.
+  const playerTraps = state.traps.filter((t) => t.placedBy === player);
+  if (playerTraps.length >= state.trapLimit) return state;
+
+  // One trap per player per cell.
+  const existing = state.traps.find(
+    (t) => t.placedBy === player && t.coord.row === coord.row && t.coord.col === coord.col,
+  );
+  if (existing) return state;
+
+  const trap: Trap = { coord: { ...coord }, blockedTile, placedBy: player };
+  return { ...state, traps: [...state.traps, trap] };
+}
+
+export function removeTrap(state: GameState, coord: CellCoord): GameState {
+  if (state.phase !== 'trapping') return state;
+  const player = state.currentPlayer;
+  const newTraps = state.traps.filter(
+    (t) => !(t.placedBy === player && t.coord.row === coord.row && t.coord.col === coord.col),
+  );
+  if (newTraps.length === state.traps.length) return state;
+  return { ...state, traps: newTraps };
+}
+
+export function confirmTraps(state: GameState): GameState {
+  if (state.phase !== 'trapping') return state;
+  if (state.currentPlayer === 'player1') {
+    // Switch to player2's trap placement.
+    return { ...state, currentPlayer: 'player2' };
+  }
+  // Both players done — move to opening.
+  const newState: GameState = {
+    ...state,
+    currentPlayer: 'player1',
+    phase: 'opening',
+  };
+  newState.legalMoves = getLegalMoves(newState);
+  return newState;
+}
+
+function createEmptyBoard(boardSize: number, missingCount: number): Board {
+  // The bottom-right corner is always missing.
+  const missingSet = new Set([`${boardSize - 1},${boardSize - 1}`]);
+
+  if (missingCount > 0) {
+    // Protected cells that must never be missing:
+    // start (0,0) and its two opening-move neighbours (0,1), (1,0).
+    const protectedKeys = new Set(['0,0', '0,1', '1,0']);
+
+    // Build list of candidate cells for random missing (excluding already-missing and protected).
+    const candidates: CellCoord[] = [];
+    for (let row = 0; row < boardSize; row++) {
+      for (let col = 0; col < boardSize; col++) {
+        const key = `${row},${col}`;
+        if (!protectedKeys.has(key) && !missingSet.has(key)) {
+          candidates.push({ row, col });
+        }
+      }
+    }
+
+    // Fisher-Yates shuffle to pick random cells.
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    const actualCount = Math.min(missingCount, candidates.length);
+    for (const c of candidates.slice(0, actualCount)) {
+      missingSet.add(`${c.row},${c.col}`);
+    }
+  }
+
   const board: Board = [];
   for (let row = 0; row < boardSize; row++) {
     const rowCells: BoardCell[] = [];
     for (let col = 0; col < boardSize; col++) {
-      const coord: CellCoord = { row, col };
+      const key = `${row},${col}`;
       let cellState: BoardCell['state'] = 'empty';
-      if (coordsEqual(coord, START_CELL)) cellState = 'start';
-      if (coordsEqual(coord, missingCell)) cellState = 'missing';
+      if (coordsEqual({ row, col }, START_CELL)) cellState = 'start';
+      else if (missingSet.has(key)) cellState = 'missing';
 
       // Pre-place a cross tile on the start cell.
       const tile: Tile | null = cellState === 'start'
@@ -148,6 +242,8 @@ export function applyMove(prevState: GameState, move: Move): GameState {
     moveHistory: [...prevState.moveHistory, move],
     pathCoords: follow.pathCoords,
     autoFollowCount: follow.followCount,
+    traps: prevState.traps,
+    trapLimit: prevState.trapLimit,
   };
 
   newState.legalMoves = getLegalMoves(newState);
@@ -192,7 +288,7 @@ function autoFollow(
     const nextCoord = getNextCoord(head, exitDir);
 
     // Stop if out of bounds or missing cell.
-    if (isOutOfBounds(nextCoord, boardSize) || isMissingCell(nextCoord, boardSize)) break;
+    if (isOutOfBounds(nextCoord, boardSize) || isMissingCell(nextCoord, board)) break;
 
     const cell = board[nextCoord.row][nextCoord.col];
     if (!cell.tile) break; // Empty cell — player must place a tile.
@@ -295,7 +391,7 @@ export function evaluateTerminal(state: GameState): GameResult | null {
   if (isOutOfBounds(nextCoord, state.boardSize)) {
     return { winner, reason: 'out_of_bounds' };
   }
-  if (isMissingCell(nextCoord, state.boardSize)) {
+  if (isMissingCell(nextCoord, state.board)) {
     return { winner, reason: 'missing_cell' };
   }
 

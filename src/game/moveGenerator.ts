@@ -1,4 +1,4 @@
-import type { GameState, Move, CellCoord } from './types';
+import type { GameState, Move, CellCoord, TileType } from './types';
 import {
   isOutOfBounds,
   isMissingCell,
@@ -20,10 +20,10 @@ export function getLegalMoves(state: GameState): Move[] {
   if (state.phase === 'finished') return [];
 
   if (state.phase === 'opening') {
-    return getOpeningMoves();
+    return filterByTraps(getOpeningMoves(), state);
   }
 
-  return getPlayingMoves(state);
+  return filterByTraps(getPlayingMoves(state), state);
 }
 
 // ─── Opening ──────────────────────────────────────────────
@@ -61,7 +61,7 @@ function getPlayingMoves(state: GameState): Move[] {
 
   // Terminal checks.
   if (isOutOfBounds(nextCoord, state.boardSize)) return [];
-  if (isMissingCell(nextCoord, state.boardSize)) return [];
+  if (isMissingCell(nextCoord, state.board)) return [];
 
   const cell = board[nextCoord.row][nextCoord.col];
 
@@ -88,4 +88,25 @@ function getPlayingMoves(state: GameState): Move[] {
     coord: nextCoord,
     tileType,
   }));
+}
+
+// ─── Trap filtering ──────────────────────────────────────
+
+function filterByTraps(moves: Move[], state: GameState): Move[] {
+  if (state.traps.length === 0) return moves;
+
+  // Collect all blocked tile types for each cell (from ALL traps, both players).
+  const blocked = new Map<string, Set<TileType>>();
+  for (const trap of state.traps) {
+    const key = `${trap.coord.row},${trap.coord.col}`;
+    if (!blocked.has(key)) blocked.set(key, new Set());
+    blocked.get(key)!.add(trap.blockedTile);
+  }
+
+  return moves.filter((m) => {
+    const key = `${m.coord.row},${m.coord.col}`;
+    const blockedSet = blocked.get(key);
+    if (!blockedSet) return true;
+    return !blockedSet.has(m.tileType);
+  });
 }

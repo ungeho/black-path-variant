@@ -17,6 +17,8 @@ interface CellProps {
   onCellClick: (row: number, col: number) => void;
   isStart: boolean;
   isMissing: boolean;
+  /** The tile type blocked by the viewing player's trap on this cell, if any. */
+  trapTile: TileType | null;
 }
 
 function CellComponent({
@@ -32,19 +34,21 @@ function CellComponent({
   onCellClick,
   isStart,
   isMissing,
+  trapTile,
 }: CellProps) {
 
   if (isMissing) {
+    const hatchId = `hatch-${row}-${col}`;
     return (
       <div className={styles.cell + ' ' + styles.missing}>
         <svg viewBox="0 0 100 100" className={styles.tileSvg}>
           <defs>
-            <pattern id="hatch" patternUnits="userSpaceOnUse" width="14" height="14" patternTransform="rotate(45)">
+            <pattern id={hatchId} patternUnits="userSpaceOnUse" width="14" height="14" patternTransform="rotate(45)">
               <line x1="0" y1="0" x2="0" y2="14" stroke="#1e2d4a" strokeWidth="2" />
             </pattern>
           </defs>
           <rect width="100" height="100" fill="#0d1117" />
-          <rect width="100" height="100" fill="url(#hatch)" opacity="0.6" />
+          <rect width="100" height="100" fill={`url(#${hatchId})`} opacity="0.6" />
           <rect x="15" y="15" width="70" height="70" rx="6" fill="none" stroke="#2a3a5c" strokeWidth="1.5" strokeDasharray="5 4" />
         </svg>
       </div>
@@ -82,6 +86,7 @@ function CellComponent({
           />
         )}
         {exitArrowDir && <ExitArrow direction={exitArrowDir} />}
+        {trapTile && <TrapMarker />}
       </svg>
     </div>
   );
@@ -179,5 +184,15 @@ function PathSegment({
       fill="none"
       stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round"
     />
+  );
+}
+
+function TrapMarker() {
+  return (
+    <g>
+      <circle cx="82" cy="18" r="14" fill="#e94560" opacity="0.85" />
+      <line x1="74" y1="10" x2="90" y2="26" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+      <line x1="90" y1="10" x2="74" y2="26" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+    </g>
   );
 }

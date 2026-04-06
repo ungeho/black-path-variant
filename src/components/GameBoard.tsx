@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
-import type { GameState, Move, TileType, CellCoord, Direction } from '../game';
+import type { GameState, Move, TileType, CellCoord, Direction, Player } from '../game';
 import {
   ALL_TILE_TYPES,
   getExitFromHead,
@@ -13,12 +13,16 @@ interface GameBoardProps {
   state: GameState;
   onMove: (move: Move) => void;
   onUndo: () => void;
+  onPlaceTrap?: (coord: CellCoord, blockedTile: TileType) => void;
+  onRemoveTrap?: (coord: CellCoord) => void;
+  onConfirmTraps?: () => void;
+  viewingPlayer?: Player;
 }
 
 /** Reusable empty arrays to avoid re-creating on every render. */
 const EMPTY_DIRECTIONS: Direction[] = [];
 
-export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
+export function GameBoard({ state, onMove, onUndo, onPlaceTrap, onRemoveTrap, onConfirmTraps, viewingPlayer }: GameBoardProps) {
   const { board, legalMoves, pathHead, moveHistory, pathCoords, boardSize } = state;
 
   // ── Selected cell for tile picker ──
@@ -66,24 +70,47 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
     return getOppositeDirection(exitDir);
   }, [state, legalMoves]);
 
+  const isTrapping = state.phase === 'trapping';
+
   const handleCellClick = useCallback(
     (row: number, col: number) => {
+      if (isTrapping) {
+        const cell = board[row][col];
+        if (cell.state === 'start' || cell.state === 'missing') return;
+        // If player already has a trap here, remove it.
+        const existing = state.traps.find(
+          (t) => t.placedBy === state.currentPlayer && t.coord.row === row && t.coord.col === col,
+        );
+        if (existing) {
+          onRemoveTrap?.({ row, col });
+          return;
+        }
+        // Check limit.
+        const count = state.traps.filter((t) => t.placedBy === state.currentPlayer).length;
+        if (count >= state.trapLimit) return;
+        setSelectedCell({ row, col });
+        return;
+      }
       const key = `${row},${col}`;
       if (legalCellSet.has(key)) {
         setSelectedCell({ row, col });
       }
     },
-    [legalCellSet],
+    [legalCellSet, isTrapping, board, state.traps, state.currentPlayer, state.trapLimit, onRemoveTrap],
   );
 
   const handleTileSelect = useCallback(
     (tileType: TileType) => {
-      if (selectedCell) {
-        onMove({ coord: selectedCell, tileType });
+      if (!selectedCell) return;
+      if (isTrapping) {
+        onPlaceTrap?.(selectedCell, tileType);
         setSelectedCell(null);
+        return;
       }
+      onMove({ coord: selectedCell, tileType });
+      setSelectedCell(null);
     },
-    [selectedCell, onMove],
+    [selectedCell, onMove, isTrapping, onPlaceTrap],
   );
 
   const handlePickerCancel = useCallback(() => setSelectedCell(null), []);
@@ -148,19 +175,33 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
     return null;
   }, [state]);
 
+  // Compute own traps set for display (only show current viewing player's traps).
+  const ownTrapMap = useMemo(() => {
+    const map = new Map<string, TileType>();
+    const player = viewingPlayer ?? state.currentPlayer;
+    for (const trap of state.traps) {
+      if (trap.placedBy === player) {
+        map.set(`${trap.coord.row},${trap.coord.col}`, trap.blockedTile);
+      }
+    }
+    return map;
+  }, [state.traps, state.currentPlayer, viewingPlayer]);
+
   // Build cell elements.
   const cells = [];
   for (let row = 0; row < boardSize; row++) {
     for (let col = 0; col < boardSize; col++) {
       const key = `${row},${col}`;
       const isHead = row === pathHead.row && col === pathHead.col;
+      const cellState = board[row][col].state;
+      const isClickableForTrap = isTrapping && cellState === 'empty';
       cells.push(
         <Cell
           key={key}
           row={row}
           col={col}
           cell={board[row][col]}
-          isLegal={legalCellSet.has(key)}
+          isLegal={legalCellSet.has(key) || isClickableForTrap}
           isPathHead={isHead}
           isOnPath={pathSet.has(key)}
           isLastMove={lastMoveCoord !== null && row === lastMoveCoord.row && col === lastMoveCoord.col}
@@ -168,7 +209,8 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
           exitArrowDir={isHead ? exitArrowDir : null}
           onCellClick={handleCellClick}
           isStart={row === 0 && col === 0}
-          isMissing={row === boardSize - 1 && col === boardSize - 1}
+          isMissing={cellState === 'missing'}
+          trapTile={ownTrapMap.get(key) ?? null}
         />,
       );
     }
@@ -235,17 +277,30 @@ export function GameBoard({ state, onMove, onUndo }: GameBoardProps) {
           }}
         >
           {cells}
-          {selectedCell && entryFromForLegal && pickerPosition && (
+          {selectedCell && pickerPosition && (isTrapping || entryFromForLegal) && (
             <TilePicker
-              entryFrom={entryFromForLegal}
+              entryFrom={isTrapping ? null : entryFromForLegal}
               currentPlayer={state.currentPlayer}
               onSelect={handleTileSelect}
               onCancel={handlePickerCancel}
               style={{ position: 'absolute', top: pickerPosition.top, left: pickerPosition.left, zIndex: 10 }}
+              trapMode={isTrapping}
+              blockedTiles={selectedCell && !isTrapping ? blockedTilesForCell(state, selectedCell) : undefined}
             />
           )}
         </div>
       </div>
+      {isTrapping && (
+        <div className={styles.trapBar}>
+          <span className={styles.trapInfo}>
+            {state.currentPlayer === 'player1' ? 'Player 1' : 'Player 2'} の罠配置
+            ({state.traps.filter((t) => t.placedBy === state.currentPlayer).length} / {state.trapLimit})
+          </span>
+          <button className={styles.trapConfirm} onClick={onConfirmTraps}>
+            確定
+          </button>
+        </div>
+      )}
       {/* Backdrop to close picker on outside click */}
       {selectedCell && (
         <div className={styles.pickerBackdrop} onClick={handlePickerCancel} />
@@ -289,4 +344,15 @@ function coordToDirection(from: CellCoord, to: CellCoord): Direction {
   if (dr === 1) return 'down';
   if (dc === -1) return 'left';
   return 'right';
+}
+
+function blockedTilesForCell(state: GameState, coord: CellCoord): Set<TileType> | undefined {
+  if (state.traps.length === 0) return undefined;
+  const blocked = new Set<TileType>();
+  for (const trap of state.traps) {
+    if (trap.coord.row === coord.row && trap.coord.col === coord.col) {
+      blocked.add(trap.blockedTile);
+    }
+  }
+  return blocked.size > 0 ? blocked : undefined;
 }

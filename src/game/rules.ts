@@ -1,4 +1,4 @@
-import type { CellCoord, Direction, Tile, TileType } from './types';
+import type { Board, CellCoord, Direction, Tile, TileType } from './types';
 import {
   BOARD_ROWS,
   BOARD_COLS,
@@ -21,9 +21,11 @@ export function isOutOfBounds(coord: CellCoord, boardSize?: number): boolean {
   );
 }
 
-export function isMissingCell(coord: CellCoord, boardSize?: number): boolean {
-  const s = boardSize ?? BOARD_ROWS;
-  return coord.row === s - 1 && coord.col === s - 1;
+export function isMissingCell(coord: CellCoord, board: Board): boolean {
+  const rows = board.length;
+  const cols = rows > 0 ? board[0].length : 0;
+  if (coord.row < 0 || coord.row >= rows || coord.col < 0 || coord.col >= cols) return false;
+  return board[coord.row][coord.col].state === 'missing';
 }
 
 export function coordsEqual(a: CellCoord, b: CellCoord): boolean {

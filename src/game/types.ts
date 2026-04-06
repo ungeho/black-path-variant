@@ -52,6 +52,15 @@ export interface BoardCell {
 
 export type Board = BoardCell[][];
 
+// ─── Trap ─────────────────────────────────────────────────
+
+export interface Trap {
+  coord: CellCoord;
+  /** The tile type that becomes unavailable on this cell. */
+  blockedTile: TileType;
+  placedBy: Player;
+}
+
 // ─── Move ─────────────────────────────────────────────────
 
 /** Serializable plain object — safe to send over the wire. */
@@ -62,7 +71,7 @@ export interface Move {
 
 // ─── Game phase / result ──────────────────────────────────
 
-export type GamePhase = 'opening' | 'playing' | 'finished';
+export type GamePhase = 'trapping' | 'opening' | 'playing' | 'finished';
 
 export interface GameResult {
   winner: Player;
@@ -95,4 +104,8 @@ export interface GameState {
    * 0 means no auto-follow occurred.
    */
   autoFollowCount: number;
+  /** Traps placed by both players. */
+  traps: Trap[];
+  /** Maximum traps each player can place. 0 = traps disabled. */
+  trapLimit: number;
 }

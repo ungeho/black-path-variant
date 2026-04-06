@@ -1,6 +1,6 @@
 import { useCallback, useReducer, useState, useEffect, useMemo, useRef } from 'react';
-import type { GameState, Move, AIDifficulty, Player } from './game';
-import { createInitialState, applyMove, selectAIMove } from './game';
+import type { GameState, Move, AIDifficulty, Player, CellCoord, TileType } from './game';
+import { createInitialState, applyMove, placeTrap, removeTrap, confirmTraps, selectAIMove } from './game';
 import { GameBoard } from './components/GameBoard';
 import { HUD } from './components/HUD';
 import { ControlPanel } from './components/ControlPanel';
@@ -17,7 +17,7 @@ const AUTO_FOLLOW_STEP_MS = 300;
 /** Delay (ms) before AI makes its move. */
 const AI_MOVE_DELAY_MS = 500;
 /** Turn time limit in seconds. 0 = no limit. */
-const TURN_TIME_OPTIONS = [0, 10, 20, 30, 60] as const;
+const TURN_TIME_OPTIONS = [0, 3, 5, 7, 9] as const;
 export type TurnTimeLimit = (typeof TURN_TIME_OPTIONS)[number];
 export { TURN_TIME_OPTIONS };
 
@@ -33,8 +33,11 @@ interface AppState {
 type Action =
   | { type: 'move'; move: Move }
   | { type: 'undo' }
-  | { type: 'restart'; boardSize?: number }
-  | { type: 'timeout' };
+  | { type: 'restart'; boardSize?: number; missingCount?: number; trapLimit?: number }
+  | { type: 'timeout' }
+  | { type: 'placeTrap'; coord: CellCoord; blockedTile: TileType }
+  | { type: 'removeTrap'; coord: CellCoord }
+  | { type: 'confirmTraps' };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -70,12 +73,27 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
     case 'restart':
-      return createAppState(action.boardSize);
+      return createAppState(action.boardSize, action.missingCount, action.trapLimit);
+    case 'placeTrap': {
+      const next = placeTrap(state.current, action.coord, action.blockedTile);
+      if (next === state.current) return state;
+      return { ...state, current: next };
+    }
+    case 'removeTrap': {
+      const next = removeTrap(state.current, action.coord);
+      if (next === state.current) return state;
+      return { ...state, current: next };
+    }
+    case 'confirmTraps': {
+      const next = confirmTraps(state.current);
+      if (next === state.current) return state;
+      return { ...state, current: next };
+    }
   }
 }
 
-function createAppState(boardSize?: number): AppState {
-  return { current: createInitialState(boardSize), history: [] };
+function createAppState(boardSize?: number, missingCount?: number, trapLimit?: number): AppState {
+  return { current: createInitialState(boardSize, missingCount ?? 0, trapLimit ?? 0), history: [] };
 }
 
 export default function App() {
@@ -85,6 +103,9 @@ export default function App() {
   const [playerSide, setPlayerSide] = useState<PlayerSide>('first');
   const [turnTimeLimit, setTurnTimeLimit] = useState<TurnTimeLimit>(0);
   const [boardSizeOption, setBoardSizeOption] = useState<BoardSizeOption>(8);
+  const [missingCountOption, setMissingCountOption] = useState(0);
+  const [trapLimitOption, setTrapLimitOption] = useState(0);
+  const [showHandoff, setShowHandoff] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [replayMoves, setReplayMoves] = useState<Move[] | null>(null);
   const [replayStep, setReplayStep] = useState(0);
@@ -146,9 +167,49 @@ export default function App() {
     aiPlayer !== null &&
     gameState.currentPlayer === aiPlayer &&
     gameState.phase !== 'finished' &&
+    gameState.phase !== 'trapping' &&
     !isAnimating;
 
+  // AI trap placement.
+  const isAITrapping =
+    aiPlayer !== null &&
+    gameState.currentPlayer === aiPlayer &&
+    gameState.phase === 'trapping';
+
   const [aiThinking, setAiThinking] = useState(false);
+
+  useEffect(() => {
+    if (!isAITrapping) return;
+    // AI places traps randomly, then confirms.
+    const timer = setTimeout(() => {
+      const { board, boardSize, trapLimit, traps, currentPlayer } = gameState;
+      const placed = traps.filter((t) => t.placedBy === currentPlayer).length;
+      const remaining = trapLimit - placed;
+      if (remaining <= 0) {
+        dispatch({ type: 'confirmTraps' });
+        return;
+      }
+      // Collect valid cells.
+      const candidates: CellCoord[] = [];
+      for (let r = 0; r < boardSize; r++) {
+        for (let c = 0; c < boardSize; c++) {
+          const cell = board[r][c];
+          if (cell.state !== 'empty') continue;
+          if (traps.some((t) => t.placedBy === currentPlayer && t.coord.row === r && t.coord.col === c)) continue;
+          candidates.push({ row: r, col: c });
+        }
+      }
+      if (candidates.length === 0) {
+        dispatch({ type: 'confirmTraps' });
+        return;
+      }
+      const coord = candidates[Math.floor(Math.random() * candidates.length)];
+      const tileTypes: TileType[] = ['curve_ul', 'curve_ur', 'cross'];
+      const blockedTile = tileTypes[Math.floor(Math.random() * tileTypes.length)];
+      dispatch({ type: 'placeTrap', coord, blockedTile });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [isAITrapping, gameState]);
 
   useEffect(() => {
     if (!isAITurn) {
@@ -271,14 +332,21 @@ export default function App() {
     (move: Move) => dispatch({ type: 'move', move }),
     [],
   );
+  const restartOpts = useCallback((overrides?: { boardSize?: number; missingCount?: number; trapLimit?: number }) => ({
+    type: 'restart' as const,
+    boardSize: overrides?.boardSize ?? boardSizeOption,
+    missingCount: overrides?.missingCount ?? missingCountOption,
+    trapLimit: overrides?.trapLimit ?? trapLimitOption,
+  }), [boardSizeOption, missingCountOption, trapLimitOption]);
+
   const handleRestart = useCallback(() => {
     setReplayMoves(null);
     setReplayStep(0);
     setReplayPlaying(false);
-    dispatch({ type: 'restart', boardSize: boardSizeOption });
-  }, [boardSizeOption]);
+    setShowHandoff(false);
+    dispatch(restartOpts());
+  }, [restartOpts]);
   const handleUndo = useCallback(() => {
-    // In PvE, undo two moves (player + AI) if possible.
     if (mode === 'pve' && state.history.length >= 2) {
       dispatch({ type: 'undo' });
       dispatch({ type: 'undo' });
@@ -288,71 +356,127 @@ export default function App() {
   }, [mode, state.history.length]);
   const handleModeChange = useCallback((newMode: GameMode) => {
     setMode(newMode);
-    dispatch({ type: 'restart', boardSize: boardSizeOption });
-  }, [boardSizeOption]);
+    dispatch(restartOpts());
+  }, [restartOpts]);
   const handleSideChange = useCallback((side: PlayerSide) => {
     setPlayerSide(side);
-    dispatch({ type: 'restart', boardSize: boardSizeOption });
-  }, [boardSizeOption]);
+    dispatch(restartOpts());
+  }, [restartOpts]);
   const handleTimeLimitChange = useCallback((limit: TurnTimeLimit) => {
     setTurnTimeLimit(limit);
-    dispatch({ type: 'restart', boardSize: boardSizeOption });
-  }, [boardSizeOption]);
+    dispatch(restartOpts());
+  }, [restartOpts]);
   const handleBoardSizeChange = useCallback((size: BoardSizeOption) => {
     setBoardSizeOption(size);
-    dispatch({ type: 'restart', boardSize: size });
+    dispatch(restartOpts({ boardSize: size }));
+  }, [restartOpts]);
+  const handleMissingCountChange = useCallback((count: number) => {
+    setMissingCountOption(count);
+    dispatch(restartOpts({ missingCount: count }));
+  }, [restartOpts]);
+  const handleReroll = useCallback(() => {
+    dispatch(restartOpts());
+  }, [restartOpts]);
+  const handleTrapLimitChange = useCallback((limit: number) => {
+    setTrapLimitOption(limit);
+    dispatch(restartOpts({ trapLimit: limit }));
+  }, [restartOpts]);
+
+  // ── Trap placement handlers ──
+  const handlePlaceTrap = useCallback((coord: CellCoord, blockedTile: TileType) => {
+    dispatch({ type: 'placeTrap', coord, blockedTile });
   }, []);
+  const handleRemoveTrap = useCallback((coord: CellCoord) => {
+    dispatch({ type: 'removeTrap', coord });
+  }, []);
+  const handleConfirmTraps = useCallback(() => {
+    dispatch({ type: 'confirmTraps' });
+    if (gameState.currentPlayer === 'player1' && aiPlayer !== 'player2') {
+      // PvP: show handoff screen before P2 places traps.
+      setShowHandoff(true);
+    }
+  }, [gameState.currentPlayer, aiPlayer]);
+  const handleHandoffDismiss = useCallback(() => {
+    setShowHandoff(false);
+  }, []);
+
+  const replayProps = replayMoves ? {
+    step: replayStep,
+    total: replayMoves.length,
+    playing: replayPlaying,
+    onStart: handleStartReplay,
+    onStop: handleStopReplay,
+    onPrev: () => setReplayStep((s) => Math.max(0, s - 1)),
+    onNext: () => setReplayStep((s) => Math.min(replayMoves.length, s + 1)),
+    onTogglePlay: () => setReplayPlaying((p) => !p),
+  } : {
+    step: 0,
+    total: gameState.moveHistory.length,
+    playing: false,
+    onStart: handleStartReplay,
+    onStop: handleStopReplay,
+    onPrev: () => {},
+    onNext: () => {},
+    onTogglePlay: () => {},
+  };
 
   return (
     <div className="app">
       <h1 className="title">Black Path Game</h1>
-      <HUD
-        state={replayState ?? displayState}
-        aiThinking={aiThinking}
-        turnRemaining={turnRemaining}
-        aiPlayer={aiPlayer}
-        record={record}
-        onRestart={handleRestart}
-        replay={replayMoves ? {
-          step: replayStep,
-          total: replayMoves.length,
-          playing: replayPlaying,
-          onStart: handleStartReplay,
-          onStop: handleStopReplay,
-          onPrev: () => setReplayStep((s) => Math.max(0, s - 1)),
-          onNext: () => setReplayStep((s) => Math.min(replayMoves.length, s + 1)),
-          onTogglePlay: () => setReplayPlaying((p) => !p),
-        } : {
-          step: 0,
-          total: gameState.moveHistory.length,
-          playing: false,
-          onStart: handleStartReplay,
-          onStop: handleStopReplay,
-          onPrev: () => {},
-          onNext: () => {},
-          onTogglePlay: () => {},
-        }}
-        isReplaying={replayMoves !== null}
-      />
-      <GameBoard state={replayState ?? interactiveState} onMove={handleMove} onUndo={handleUndo} />
-      <ControlPanel
-        mode={mode}
-        onModeChange={handleModeChange}
-        aiDifficulty={aiDifficulty}
-        onDifficultyChange={setAIDifficulty}
-        playerSide={playerSide}
-        onSideChange={handleSideChange}
-        turnTimeLimit={turnTimeLimit}
-        onTimeLimitChange={handleTimeLimitChange}
-        boardSize={boardSizeOption}
-        onBoardSizeChange={handleBoardSizeChange}
-        onRestart={handleRestart}
-        canUndo={state.history.length > 0 && !isAnimating && !isAITurn}
-        onUndo={handleUndo}
-        onHelp={() => setShowHelp(true)}
-        muted={sound.muted}
-        onToggleMute={sound.toggleMute}
-      />
+      <div className="main-layout">
+        <div className="board-area">
+          <HUD
+            state={replayState ?? displayState}
+            aiThinking={aiThinking}
+            turnRemaining={turnRemaining}
+            aiPlayer={aiPlayer}
+            record={record}
+            onRestart={handleRestart}
+            replay={replayProps}
+            isReplaying={replayMoves !== null}
+          />
+          <GameBoard
+            state={replayState ?? interactiveState}
+            onMove={handleMove}
+            onUndo={handleUndo}
+            onPlaceTrap={handlePlaceTrap}
+            onRemoveTrap={handleRemoveTrap}
+            onConfirmTraps={handleConfirmTraps}
+            viewingPlayer={gameState.currentPlayer}
+          />
+        </div>
+        <ControlPanel
+          mode={mode}
+          onModeChange={handleModeChange}
+          aiDifficulty={aiDifficulty}
+          onDifficultyChange={setAIDifficulty}
+          playerSide={playerSide}
+          onSideChange={handleSideChange}
+          turnTimeLimit={turnTimeLimit}
+          onTimeLimitChange={handleTimeLimitChange}
+          boardSize={boardSizeOption}
+          onBoardSizeChange={handleBoardSizeChange}
+          missingCount={missingCountOption}
+          onMissingCountChange={handleMissingCountChange}
+          onReroll={handleReroll}
+          trapLimit={trapLimitOption}
+          onTrapLimitChange={handleTrapLimitChange}
+          onRestart={handleRestart}
+          canUndo={state.history.length > 0 && !isAnimating && !isAITurn}
+          onUndo={handleUndo}
+          onHelp={() => setShowHelp(true)}
+          muted={sound.muted}
+          onToggleMute={sound.toggleMute}
+        />
+      </div>
+      {showHandoff && (
+        <div className="handoff-overlay" onClick={handleHandoffDismiss}>
+          <div className="handoff-content">
+            <p>Player 2 に端末を渡してください</p>
+            <button onClick={handleHandoffDismiss}>準備OK</button>
+          </div>
+        </div>
+      )}
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>
   );

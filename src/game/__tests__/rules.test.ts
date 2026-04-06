@@ -10,7 +10,20 @@ import {
   getTileExit,
   compatibleTiles,
 } from '../rules';
-import type { Tile } from '../types';
+import type { Board, BoardCell, Tile } from '../types';
+
+function makeBoard(size: number, missingCoords: [number, number][] = []): Board {
+  const missingSet = new Set(missingCoords.map(([r, c]) => `${r},${c}`));
+  const board: Board = [];
+  for (let r = 0; r < size; r++) {
+    const row: BoardCell[] = [];
+    for (let c = 0; c < size; c++) {
+      row.push({ state: missingSet.has(`${r},${c}`) ? 'missing' : 'empty', tile: null });
+    }
+    board.push(row);
+  }
+  return board;
+}
 
 describe('isOutOfBounds', () => {
   it('detects out-of-bounds coordinates', () => {
@@ -28,13 +41,16 @@ describe('isOutOfBounds', () => {
 });
 
 describe('isMissingCell', () => {
-  it('identifies (7,7) as missing', () => {
-    expect(isMissingCell({ row: 7, col: 7 })).toBe(true);
+  it('identifies a missing cell on the board', () => {
+    const board = makeBoard(8, [[7, 7], [3, 4]]);
+    expect(isMissingCell({ row: 7, col: 7 }, board)).toBe(true);
+    expect(isMissingCell({ row: 3, col: 4 }, board)).toBe(true);
   });
 
-  it('rejects other cells', () => {
-    expect(isMissingCell({ row: 0, col: 0 })).toBe(false);
-    expect(isMissingCell({ row: 7, col: 6 })).toBe(false);
+  it('rejects non-missing cells', () => {
+    const board = makeBoard(8, [[7, 7]]);
+    expect(isMissingCell({ row: 0, col: 0 }, board)).toBe(false);
+    expect(isMissingCell({ row: 7, col: 6 }, board)).toBe(false);
   });
 });
 

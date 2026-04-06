@@ -38,6 +38,40 @@
   z-index: 5;
 }
 
+.trapBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.trapInfo {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.trapConfirm {
+  padding: 6px 18px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: opacity 0.15s;
+}
+
+.trapConfirm:hover {
+  opacity: 0.85;
+}
+
 @media (max-width: 700px) {
   .colLabel,
   .rowLabel {

@@ -218,9 +218,18 @@ function evaluate(state: GameState, aiPlayer: Player, ply: number): number {
 
   let score = 0;
 
-  const { pathHead, boardSize } = state;
+  const { pathHead, boardSize, board } = state;
   const maxIdx = boardSize - 1;
-  const missingCell: CellCoord = { row: maxIdx, col: maxIdx };
+
+  // Collect all missing cells from the board.
+  const missingCells: CellCoord[] = [];
+  for (let r = 0; r < boardSize; r++) {
+    for (let c = 0; c < boardSize; c++) {
+      if (board[r][c].state === 'missing') {
+        missingCells.push({ row: r, col: c });
+      }
+    }
+  }
 
   // 1. Distance to nearest edge — closer = more dangerous for current player.
   const distToNearestEdge = Math.min(
@@ -231,11 +240,15 @@ function evaluate(state: GameState, aiPlayer: Player, ply: number): number {
   );
   score += sign * (5 - distToNearestEdge) * 15;
 
-  // 2. Distance to missing cell.
-  const distToMissing =
-    Math.abs(pathHead.row - missingCell.row) +
-    Math.abs(pathHead.col - missingCell.col);
-  score += sign * Math.max(0, 6 - distToMissing) * 12;
+  // 2. Distance to nearest missing cell.
+  if (missingCells.length > 0) {
+    const distToMissing = Math.min(
+      ...missingCells.map((mc) =>
+        Math.abs(pathHead.row - mc.row) + Math.abs(pathHead.col - mc.col),
+      ),
+    );
+    score += sign * Math.max(0, 6 - distToMissing) * 12;
+  }
 
   // 3. Exit direction — steps to board edge in the exit direction.
   const exitDir = getExitFromHead(state);
@@ -249,11 +262,12 @@ function evaluate(state: GameState, aiPlayer: Player, ply: number): number {
     }
   }
 
-  // 4. Missing cell corner proximity — extremely dangerous zone.
-  const cornerThreshold = Math.max(3, boardSize - 3);
-  if (pathHead.row >= cornerThreshold && pathHead.col >= cornerThreshold) {
-    const cornerDist = (maxIdx - pathHead.row) + (maxIdx - pathHead.col);
-    score += sign * (4 - cornerDist) * 25;
+  // 4. Proximity to any missing cell — dangerous zones.
+  for (const mc of missingCells) {
+    const dist = Math.abs(pathHead.row - mc.row) + Math.abs(pathHead.col - mc.col);
+    if (dist <= 4) {
+      score += sign * (4 - dist) * 25;
+    }
   }
 
   // 5. Corner (0,0) proximity — also dangerous (path can loop back).

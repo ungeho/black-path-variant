@@ -1,7 +1,6 @@
 .hud {
   width: 100%;
-  max-width: 580px;
-  padding: 0 16px;
+  padding: 0;
 }
 
 /* ─── Status bar (during play) ─── */

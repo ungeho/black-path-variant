@@ -8,6 +8,7 @@ export type {
   CellState,
   BoardCell,
   Board,
+  Trap,
   Move,
   GamePhase,
   GameResult,
@@ -18,7 +19,6 @@ export {
   BOARD_ROWS,
   BOARD_COLS,
   START_CELL,
-  MISSING_CELL,
   ALL_TILE_TYPES,
   TILE_PATHS,
 } from './constants';
@@ -41,6 +41,9 @@ export { getLegalMoves } from './moveGenerator';
 export {
   createInitialState,
   applyMove,
+  placeTrap,
+  removeTrap,
+  confirmTraps,
   evaluateTerminal,
   getExitFromHead,
 } from './engine';

@@ -146,7 +146,7 @@ export function HUD({ state, aiThinking, turnRemaining, aiPlayer, record, onRest
               {playerLabel(currentPlayer, aiPlayer)}
             </span>
             <span className={styles.turnHint}>
-              {phase === 'opening' ? '最初の一手' : 'の番'}
+              {phase === 'trapping' ? '罠を配置' : phase === 'opening' ? '最初の一手' : 'の番'}
             </span>
           </div>
           {aiThinking && (

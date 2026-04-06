@@ -1,71 +1,142 @@
-.panel {
+/* ─── Sidebar container ─────────────────────────────── */
+
+.sidebar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px 16px;
-  max-width: 580px;
-  width: 100%;
+  gap: 12px;
+  width: 220px;
+  flex-shrink: 0;
 }
 
-.row {
+/* ─── Card ───────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.cardTitle {
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--surface-light);
+  border-bottom: 1px solid var(--border);
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+/* ─── Setting row ────────────────────────────────────── */
+
+.settingRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settingLabelRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.settingLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.settingHint {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  opacity: 0.65;
+}
+
+.settingControls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.modeGroup {
+/* ─── Button group ───────────────────────────────────── */
+
+.btnGroup {
   display: flex;
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
 }
 
-.modeButton {
-  padding: 5px 10px;
-  font-size: 0.75rem;
+.btnGroupItem {
+  padding: 4px 8px;
+  font-size: 0.68rem;
   font-weight: 600;
   border: none;
   background: var(--surface-light);
   color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
 }
 
-.modeButton + .modeButton {
+.btnGroupItem + .btnGroupItem {
   border-left: 1px solid var(--border);
 }
 
-.modeButton:hover {
+.btnGroupItem:hover {
   background: var(--border);
   color: var(--text);
 }
 
-.modeActive {
+.btnGroupActive {
   background: var(--accent);
   color: #fff;
 }
 
-.modeActive:hover {
+.btnGroupActive:hover {
   background: var(--accent);
 }
 
-.timerGroup {
+/* ─── Action buttons ─────────────────────────────────── */
+
+.actionButtons {
   display: flex;
-  align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
 }
 
-.timerLabel {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
+.primaryButton {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
 
-.button {
-  padding: 5px 14px;
-  font-size: 0.8125rem;
+.primaryButton:hover {
+  opacity: 0.85;
+}
+
+.secondaryButton {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 0.78rem;
   font-weight: 600;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -75,19 +146,67 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.button:hover:not(:disabled) {
+.secondaryButton:hover:not(:disabled) {
   background: var(--accent);
   color: #fff;
 }
 
-.button:disabled {
+.secondaryButton:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
-.helpButton {
-  padding: 5px 10px;
-  font-weight: 800;
+.iconButton {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
   border-radius: 50%;
-  min-width: 30px;
+  background: var(--surface-light);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.iconButton:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.tinyButton {
+  padding: 3px 8px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-light);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tinyButton:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ─── Responsive: stack below board on narrow screens ── */
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 100%;
+    max-width: 580px;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .card {
+    flex: 1;
+    min-width: 200px;
+  }
 }
