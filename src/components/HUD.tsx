@@ -112,6 +112,9 @@ export function HUD({ state, aiThinking, turnRemaining, aiPlayer, record, onRest
                 </span>
               </div>
             </div>
+            <div className={styles.restartPrompt}>
+              「リスタート」を押して新しいゲームを開始してください
+            </div>
             <div className={styles.resultActions}>
               <button className={styles.restartButton} onClick={onRestart}>
                 もう一度

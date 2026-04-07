@@ -250,6 +250,23 @@
   opacity: 0.85;
 }
 
+/* ─── Restart prompt ─── */
+
+.restartPrompt {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #f5c542;
+  background: rgba(245, 197, 66, 0.1);
+  padding: 6px 14px;
+  border-radius: 8px;
+  animation: promptPulse 2s ease-in-out infinite;
+}
+
+@keyframes promptPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
 /* ─── Result actions row ─── */
 
 .resultActions {
