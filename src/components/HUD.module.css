@@ -61,8 +61,8 @@
 .guideText {
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--accent);
-  background: rgba(233, 69, 96, 0.08);
+  color: #f5c542;
+  background: rgba(245, 197, 66, 0.1);
   padding: 4px 12px;
   border-radius: 12px;
   white-space: nowrap;
