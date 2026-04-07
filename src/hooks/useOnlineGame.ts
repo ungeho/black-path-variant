@@ -15,6 +15,9 @@ import { ref, onValue } from 'firebase/database';
 import { db } from '../firebase/config';
 import { useServerTime } from './useServerTime';
 
+/** Time limit for trap placement phase (seconds). */
+const TRAP_TIME_LIMIT = 60;
+
 interface UseOnlineGameReturn {
   /** Current reconstructed game state. */
   gameState: GameState | null;
@@ -40,6 +43,8 @@ interface UseOnlineGameReturn {
   };
   /** Local player's pending traps (during trapping phase). */
   localTraps: Trap[];
+  /** Remaining seconds for trap placement (null if not in trapping phase). */
+  trapTimeRemaining: number | null;
 }
 
 export function useOnlineGame(
@@ -60,6 +65,8 @@ export function useOnlineGame(
 
   // Time remaining for current turn.
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  // Time remaining for trap placement.
+  const [trapTimeRemaining, setTrapTimeRemaining] = useState<number | null>(null);
 
   // Opponent presence.
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
@@ -190,6 +197,37 @@ export function useOnlineGame(
     return () => clearInterval(interval);
   }, [roomData.turnStartedAt, settings.turnTimeLimit, gameState?.currentPlayer, gameState?.phase, localPlayer, opponentPlayer, roomCode, serverNow]);
 
+  // ── Trap placement timer ──
+  const myTrapsConfirmed = roomData.traps?.[`${localPlayer}Confirmed` as keyof typeof roomData.traps] === true;
+  const opponentTrapsConfirmed = roomData.traps?.[`${opponentPlayer}Confirmed` as keyof typeof roomData.traps] === true;
+  const isTrapping = roomData.status === 'trapping';
+
+  useEffect(() => {
+    if (!isTrapping || !roomData.turnStartedAt) {
+      setTrapTimeRemaining(null);
+      return;
+    }
+    // Already confirmed — no timer needed for this player.
+    if (myTrapsConfirmed) {
+      setTrapTimeRemaining(null);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const elapsed = (serverNow() - roomData.turnStartedAt!) / 1000;
+      const remaining = Math.max(0, TRAP_TIME_LIMIT - elapsed);
+      setTrapTimeRemaining(Math.ceil(remaining));
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        // Player who didn't confirm in time loses.
+        setRoomStatus(roomCode, 'finished', opponentPlayer);
+      }
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [isTrapping, roomData.turnStartedAt, myTrapsConfirmed, serverNow, roomCode, opponentPlayer]);
+
   // ── Opponent presence ──
   useEffect(() => {
     if (!roomCode) return;
@@ -240,11 +278,6 @@ export function useOnlineGame(
     fbConfirmTraps(roomCode, localPlayer);
   }, [roomCode, localPlayer, localTraps]);
 
-  // Compute trapping status.
-  const myTrapsConfirmed = roomData.traps?.[`${localPlayer}Confirmed` as keyof typeof roomData.traps] === true;
-  const opponentTrapsConfirmed = roomData.traps?.[`${opponentPlayer}Confirmed` as keyof typeof roomData.traps] === true;
-  const isTrapping = roomData.status === 'trapping';
-
   const isMyTurn = gameState?.currentPlayer === localPlayer && gameState?.phase !== 'finished';
 
   return {
@@ -262,5 +295,6 @@ export function useOnlineGame(
       opponentTrapsConfirmed: opponentTrapsConfirmed as boolean,
     },
     localTraps,
+    trapTimeRemaining,
   };
 }

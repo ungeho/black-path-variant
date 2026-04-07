@@ -24,6 +24,7 @@ export function OnlineGame({ roomCode, roomData, localPlayer, onLeave }: OnlineG
     opponentDisconnected,
     trappingStatus,
     localTraps,
+    trapTimeRemaining,
   } = useOnlineGame(roomCode, roomData, localPlayer);
 
   const [showResult, setShowResult] = useState(true);
@@ -64,14 +65,19 @@ export function OnlineGame({ roomCode, roomData, localPlayer, onLeave }: OnlineG
         <div className={styles.roomInfo}>Room: {roomCode}</div>
         <div className={styles.statusBar}>
           <span>罠配置フェーズ ({localTraps.length}/{roomData.settings.trapLimit})</span>
+          {trapTimeRemaining !== null && (
+            <span className={`${styles.timer} ${trapTimeRemaining <= 10 ? styles.timerUrgent : ''}`}>
+              {trapTimeRemaining}s
+            </span>
+          )}
         </div>
 
         <GameBoard
           state={trapDisplayState}
           onMove={() => {}}
           onUndo={() => {}}
-          onPlaceTrap={(coord: CellCoord, blockedTile: TileType) => placeTrap(coord, blockedTile)}
-          onRemoveTrap={(coord: CellCoord) => removeTrap(coord)}
+          onPlaceTrap={myConfirmed ? undefined : (coord: CellCoord, blockedTile: TileType) => placeTrap(coord, blockedTile)}
+          onRemoveTrap={myConfirmed ? undefined : (coord: CellCoord) => removeTrap(coord)}
           viewingPlayer={localPlayer}
         />
 
