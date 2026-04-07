@@ -442,10 +442,6 @@ export default function App() {
     });
   }, [room, boardSizeOption, missingCountOption, trapLimitOption, turnTimeLimit]);
 
-  const handleJoinRoom = useCallback((code: string) => {
-    room.join(code);
-  }, [room]);
-
   const handleLeaveRoom = useCallback(() => {
     room.leave();
   }, [room]);
@@ -517,7 +513,6 @@ export default function App() {
     return (
       <Lobby
         onCreateRoom={handleCreateRoom}
-        onJoinRoom={handleJoinRoom}
         error={room.error}
         isCreating={room.phase === 'creating'}
       />
