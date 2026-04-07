@@ -30,6 +30,7 @@ interface ControlPanelProps {
 const MODE_LABELS: Record<GameMode, string> = {
   pvp: '対人戦',
   pve: 'vs AI',
+  online: 'オンライン',
 };
 
 const DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
@@ -111,9 +112,11 @@ export function ControlPanel({
             <button className={styles.primaryButton} onClick={onRestart}>
               リスタート
             </button>
-            <button className={styles.secondaryButton} onClick={onUndo} disabled={!canUndo}>
-              一手戻す
-            </button>
+            {mode === 'pve' && (
+              <button className={styles.secondaryButton} onClick={onUndo} disabled={!canUndo}>
+                一手戻す
+              </button>
+            )}
             <button
               className={styles.iconButton}
               onClick={onToggleMute}

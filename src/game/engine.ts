@@ -16,6 +16,7 @@ import {
   BOARD_ROWS,
   START_CELL,
 } from './constants';
+import { seededShuffle } from './seededRandom';
 import {
   coordsEqual,
   getNextCoord,
@@ -34,8 +35,9 @@ export function createInitialState(
   boardSize: number = BOARD_ROWS,
   missingCount: number = 0,
   trapLimit: number = 0,
+  seed?: number,
 ): GameState {
-  const board = createEmptyBoard(boardSize, missingCount);
+  const board = createEmptyBoard(boardSize, missingCount, seed);
   const phase: GamePhase = trapLimit > 0 ? 'trapping' : 'opening';
   const state: GameState = {
     board,
@@ -112,7 +114,7 @@ export function confirmTraps(state: GameState): GameState {
   return newState;
 }
 
-function createEmptyBoard(boardSize: number, missingCount: number): Board {
+function createEmptyBoard(boardSize: number, missingCount: number, seed?: number): Board {
   // The bottom-right corner is always missing.
   const missingSet = new Set([`${boardSize - 1},${boardSize - 1}`]);
 
@@ -132,13 +134,19 @@ function createEmptyBoard(boardSize: number, missingCount: number): Board {
       }
     }
 
-    // Fisher-Yates shuffle to pick random cells.
-    for (let i = candidates.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    // Shuffle to pick random cells — use seeded PRNG if seed provided, else Math.random.
+    let shuffled: CellCoord[];
+    if (seed !== undefined) {
+      shuffled = seededShuffle(candidates, seed);
+    } else {
+      shuffled = [...candidates];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
     }
-    const actualCount = Math.min(missingCount, candidates.length);
-    for (const c of candidates.slice(0, actualCount)) {
+    const actualCount = Math.min(missingCount, shuffled.length);
+    for (const c of shuffled.slice(0, actualCount)) {
       missingSet.add(`${c.row},${c.col}`);
     }
   }

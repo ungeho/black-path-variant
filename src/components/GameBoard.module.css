@@ -1,8 +1,9 @@
 .wrapper {
-  display: inline-grid;
+  display: grid;
   /* grid-template-columns/rows set via inline style for dynamic board size */
   gap: 0;
   user-select: none;
+  width: fit-content;
 }
 
 .colLabel,
@@ -70,6 +71,12 @@
 
 .trapConfirm:hover {
   opacity: 0.85;
+}
+
+.trapWarning {
+  font-size: 0.75rem;
+  color: #e74c3c;
+  font-weight: 600;
 }
 
 @media (max-width: 700px) {

@@ -23,6 +23,8 @@
   display: flex;
   gap: 24px;
   align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .board-area {
@@ -30,15 +32,6 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-}
-
-/* ─── Responsive: stack vertically on narrow screens ─── */
-
-@media (max-width: 900px) {
-  .main-layout {
-    flex-direction: column;
-    align-items: center;
-  }
 }
 
 /* ─── Handoff overlay ─── */

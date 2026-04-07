@@ -9,7 +9,13 @@
       "Bash(npm install:*)",
       "Bash(npm run:*)",
       "Bash(node -e ':*)",
-      "WebFetch(domain:en.wikipedia.org)"
+      "WebFetch(domain:en.wikipedia.org)",
+      "Bash(curl -s http://localhost:5199/)",
+      "Bash(curl -s http://localhost:5199/src/components/GameBoard.module.css)",
+      "Bash(netstat -ano)",
+      "Bash(firebase login:*)",
+      "Bash(firebase login:ci:*)",
+      "Bash(firebase deploy:*)"
     ]
   }
 }

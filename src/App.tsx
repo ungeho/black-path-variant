@@ -5,11 +5,15 @@ import { GameBoard } from './components/GameBoard';
 import { HUD } from './components/HUD';
 import { ControlPanel } from './components/ControlPanel';
 import { HelpModal } from './components/HelpModal';
+import { Lobby, WaitingScreen } from './components/Lobby';
+import { RoomLobby } from './components/RoomLobby';
+import { OnlineGame } from './components/OnlineGame';
+import { useRoom } from './hooks/useRoom';
 import { useRecord } from './hooks/useRecord';
 import { useSound } from './hooks/useSound';
 import './App.css';
 
-export type GameMode = 'pvp' | 'pve';
+export type GameMode = 'pvp' | 'pve' | 'online';
 export type PlayerSide = 'first' | 'second';
 
 /** Delay (ms) between each auto-follow step in the animation. */
@@ -92,20 +96,21 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-function createAppState(boardSize?: number, missingCount?: number, trapLimit?: number): AppState {
-  return { current: createInitialState(boardSize, missingCount ?? 0, trapLimit ?? 0), history: [] };
+function createAppState(boardSize?: number | null, missingCount?: number, trapLimit?: number): AppState {
+  return { current: createInitialState(boardSize ?? undefined, missingCount ?? 0, trapLimit ?? 0), history: [] };
 }
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, null, createAppState);
   const [mode, setMode] = useState<GameMode>('pvp');
+  const room = useRoom();
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [playerSide, setPlayerSide] = useState<PlayerSide>('first');
   const [turnTimeLimit, setTurnTimeLimit] = useState<TurnTimeLimit>(0);
   const [boardSizeOption, setBoardSizeOption] = useState<BoardSizeOption>(8);
   const [missingCountOption, setMissingCountOption] = useState(0);
   const [trapLimitOption, setTrapLimitOption] = useState(0);
-  const [showHandoff, setShowHandoff] = useState(false);
+  const [showHandoff, setShowHandoff] = useState<Player | 'pre1' | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [replayMoves, setReplayMoves] = useState<Move[] | null>(null);
   const [replayStep, setReplayStep] = useState(0);
@@ -180,35 +185,35 @@ export default function App() {
 
   useEffect(() => {
     if (!isAITrapping) return;
-    // AI places traps randomly, then confirms.
-    const timer = setTimeout(() => {
-      const { board, boardSize, trapLimit, traps, currentPlayer } = gameState;
-      const placed = traps.filter((t) => t.placedBy === currentPlayer).length;
-      const remaining = trapLimit - placed;
-      if (remaining <= 0) {
-        dispatch({ type: 'confirmTraps' });
-        return;
+    // AI places all traps at once, then confirms — so positions are never visible.
+    const { board, boardSize, trapLimit, traps, currentPlayer } = gameState;
+    const placed = traps.filter((t) => t.placedBy === currentPlayer).length;
+    const remaining = trapLimit - placed;
+    if (remaining <= 0) {
+      dispatch({ type: 'confirmTraps' });
+      return;
+    }
+    const candidates: CellCoord[] = [];
+    for (let r = 0; r < boardSize; r++) {
+      for (let c = 0; c < boardSize; c++) {
+        const cell = board[r][c];
+        if (cell.state !== 'empty') continue;
+        if (traps.some((t) => t.placedBy === currentPlayer && t.coord.row === r && t.coord.col === c)) continue;
+        candidates.push({ row: r, col: c });
       }
-      // Collect valid cells.
-      const candidates: CellCoord[] = [];
-      for (let r = 0; r < boardSize; r++) {
-        for (let c = 0; c < boardSize; c++) {
-          const cell = board[r][c];
-          if (cell.state !== 'empty') continue;
-          if (traps.some((t) => t.placedBy === currentPlayer && t.coord.row === r && t.coord.col === c)) continue;
-          candidates.push({ row: r, col: c });
-        }
-      }
-      if (candidates.length === 0) {
-        dispatch({ type: 'confirmTraps' });
-        return;
-      }
-      const coord = candidates[Math.floor(Math.random() * candidates.length)];
-      const tileTypes: TileType[] = ['curve_ul', 'curve_ur', 'cross'];
+    }
+    // Shuffle candidates.
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    const tileTypes: TileType[] = ['curve_ul', 'curve_ur', 'cross'];
+    const count = Math.min(remaining, candidates.length);
+    for (let i = 0; i < count; i++) {
       const blockedTile = tileTypes[Math.floor(Math.random() * tileTypes.length)];
-      dispatch({ type: 'placeTrap', coord, blockedTile });
-    }, 200);
-    return () => clearTimeout(timer);
+      dispatch({ type: 'placeTrap', coord: candidates[i], blockedTile });
+    }
+    dispatch({ type: 'confirmTraps' });
   }, [isAITrapping, gameState]);
 
   useEffect(() => {
@@ -343,9 +348,15 @@ export default function App() {
     setReplayMoves(null);
     setReplayStep(0);
     setReplayPlaying(false);
-    setShowHandoff(false);
-    dispatch(restartOpts());
-  }, [restartOpts]);
+    const opts = restartOpts();
+    dispatch(opts);
+    // Show pre-handoff for P1 if trapping is enabled in PvP.
+    if ((opts.trapLimit ?? 0) > 0 && mode === 'pvp') {
+      setShowHandoff('pre1');
+    } else {
+      setShowHandoff(null);
+    }
+  }, [restartOpts, mode]);
   const handleUndo = useCallback(() => {
     if (mode === 'pve' && state.history.length >= 2) {
       dispatch({ type: 'undo' });
@@ -356,8 +367,11 @@ export default function App() {
   }, [mode, state.history.length]);
   const handleModeChange = useCallback((newMode: GameMode) => {
     setMode(newMode);
-    dispatch(restartOpts());
-  }, [restartOpts]);
+    if (newMode !== 'online') {
+      room.leave();
+      dispatch(restartOpts());
+    }
+  }, [restartOpts, room]);
   const handleSideChange = useCallback((side: PlayerSide) => {
     setPlayerSide(side);
     dispatch(restartOpts());
@@ -392,13 +406,35 @@ export default function App() {
   const handleConfirmTraps = useCallback(() => {
     dispatch({ type: 'confirmTraps' });
     if (gameState.currentPlayer === 'player1' && aiPlayer !== 'player2') {
-      // PvP: show handoff screen before P2 places traps.
-      setShowHandoff(true);
+      setShowHandoff('player2');
     }
   }, [gameState.currentPlayer, aiPlayer]);
   const handleHandoffDismiss = useCallback(() => {
-    setShowHandoff(false);
+    setShowHandoff(null);
   }, []);
+
+  // ── Online handlers ──
+  const handleCreateRoom = useCallback(() => {
+    room.create({
+      boardSize: boardSizeOption,
+      missingCount: missingCountOption,
+      trapLimit: trapLimitOption,
+      turnTimeLimit,
+      missingSeed: Math.floor(Math.random() * 2147483647),
+    });
+  }, [room, boardSizeOption, missingCountOption, trapLimitOption, turnTimeLimit]);
+
+  const handleJoinRoom = useCallback((code: string) => {
+    room.join(code);
+  }, [room]);
+
+  const handleLeaveRoom = useCallback(() => {
+    room.leave();
+  }, [room]);
+
+  const handleOnlineLeave = useCallback(() => {
+    room.leave();
+  }, [room]);
 
   const replayProps = replayMoves ? {
     step: replayStep,
@@ -420,59 +456,144 @@ export default function App() {
     onTogglePlay: () => {},
   };
 
+  // ── Online mode rendering ──
+  const renderOnlineContent = () => {
+    // Game is actively playing or in trapping phase
+    if (room.roomData && (room.roomData.status === 'playing' || room.roomData.status === 'trapping' || room.roomData.status === 'finished') && room.localPlayer) {
+      return (
+        <OnlineGame
+          roomCode={room.roomCode!}
+          roomData={room.roomData}
+          localPlayer={room.localPlayer}
+          onLeave={handleOnlineLeave}
+        />
+      );
+    }
+
+    // Both players joined — show room lobby
+    if (room.phase === 'joined' && room.roomCode && room.roomData && room.localPlayer) {
+      return (
+        <RoomLobby
+          roomCode={room.roomCode}
+          roomData={room.roomData}
+          localPlayer={room.localPlayer}
+          isHost={room.localPlayer === 'player1'}
+          onChangeSettings={(settings) => room.changeSettings(settings)}
+          onStart={() => room.start()}
+          onLeave={handleLeaveRoom}
+        />
+      );
+    }
+
+    // Waiting for guest to join
+    if (room.phase === 'waiting' && room.roomCode) {
+      return (
+        <WaitingScreen
+          roomCode={room.roomCode}
+          onCancel={handleLeaveRoom}
+        />
+      );
+    }
+
+    // Default: show lobby (create/join)
+    return (
+      <Lobby
+        onCreateRoom={handleCreateRoom}
+        onJoinRoom={handleJoinRoom}
+        error={room.error}
+        isCreating={room.phase === 'creating'}
+      />
+    );
+  };
+
   return (
     <div className="app">
       <h1 className="title">Black Path Game</h1>
-      <div className="main-layout">
-        <div className="board-area">
-          <HUD
-            state={replayState ?? displayState}
-            aiThinking={aiThinking}
-            turnRemaining={turnRemaining}
-            aiPlayer={aiPlayer}
-            record={record}
+      {mode === 'online' ? (
+        <div className="main-layout">
+          <div className="board-area">
+            {renderOnlineContent()}
+          </div>
+          <ControlPanel
+            mode={mode}
+            onModeChange={handleModeChange}
+            aiDifficulty={aiDifficulty}
+            onDifficultyChange={setAIDifficulty}
+            playerSide={playerSide}
+            onSideChange={handleSideChange}
+            turnTimeLimit={turnTimeLimit}
+            onTimeLimitChange={handleTimeLimitChange}
+            boardSize={boardSizeOption}
+            onBoardSizeChange={handleBoardSizeChange}
+            missingCount={missingCountOption}
+            onMissingCountChange={handleMissingCountChange}
+            onReroll={handleReroll}
+            trapLimit={trapLimitOption}
+            onTrapLimitChange={handleTrapLimitChange}
             onRestart={handleRestart}
-            replay={replayProps}
-            isReplaying={replayMoves !== null}
-          />
-          <GameBoard
-            state={replayState ?? interactiveState}
-            onMove={handleMove}
+            canUndo={false}
             onUndo={handleUndo}
-            onPlaceTrap={handlePlaceTrap}
-            onRemoveTrap={handleRemoveTrap}
-            onConfirmTraps={handleConfirmTraps}
-            viewingPlayer={gameState.currentPlayer}
+            onHelp={() => setShowHelp(true)}
+            muted={sound.muted}
+            onToggleMute={sound.toggleMute}
           />
         </div>
-        <ControlPanel
-          mode={mode}
-          onModeChange={handleModeChange}
-          aiDifficulty={aiDifficulty}
-          onDifficultyChange={setAIDifficulty}
-          playerSide={playerSide}
-          onSideChange={handleSideChange}
-          turnTimeLimit={turnTimeLimit}
-          onTimeLimitChange={handleTimeLimitChange}
-          boardSize={boardSizeOption}
-          onBoardSizeChange={handleBoardSizeChange}
-          missingCount={missingCountOption}
-          onMissingCountChange={handleMissingCountChange}
-          onReroll={handleReroll}
-          trapLimit={trapLimitOption}
-          onTrapLimitChange={handleTrapLimitChange}
-          onRestart={handleRestart}
-          canUndo={state.history.length > 0 && !isAnimating && !isAITurn}
-          onUndo={handleUndo}
-          onHelp={() => setShowHelp(true)}
-          muted={sound.muted}
-          onToggleMute={sound.toggleMute}
-        />
-      </div>
-      {showHandoff && (
+      ) : (
+        <div className="main-layout">
+          <div className="board-area">
+            <HUD
+              state={replayState ?? displayState}
+              aiThinking={aiThinking}
+              turnRemaining={turnRemaining}
+              aiPlayer={aiPlayer}
+              record={record}
+              onRestart={handleRestart}
+              replay={replayProps}
+              isReplaying={replayMoves !== null}
+            />
+            <GameBoard
+              state={replayState ?? interactiveState}
+              onMove={handleMove}
+              onUndo={handleUndo}
+              onPlaceTrap={handlePlaceTrap}
+              onRemoveTrap={handleRemoveTrap}
+              onConfirmTraps={handleConfirmTraps}
+              viewingPlayer={gameState.currentPlayer}
+            />
+          </div>
+          <ControlPanel
+            mode={mode}
+            onModeChange={handleModeChange}
+            aiDifficulty={aiDifficulty}
+            onDifficultyChange={setAIDifficulty}
+            playerSide={playerSide}
+            onSideChange={handleSideChange}
+            turnTimeLimit={turnTimeLimit}
+            onTimeLimitChange={handleTimeLimitChange}
+            boardSize={boardSizeOption}
+            onBoardSizeChange={handleBoardSizeChange}
+            missingCount={missingCountOption}
+            onMissingCountChange={handleMissingCountChange}
+            onReroll={handleReroll}
+            trapLimit={trapLimitOption}
+            onTrapLimitChange={handleTrapLimitChange}
+            onRestart={handleRestart}
+            canUndo={state.history.length > 0 && !isAnimating && !isAITurn}
+            onUndo={handleUndo}
+            onHelp={() => setShowHelp(true)}
+            muted={sound.muted}
+            onToggleMute={sound.toggleMute}
+          />
+        </div>
+      )}
+      {showHandoff !== null && (
         <div className="handoff-overlay" onClick={handleHandoffDismiss}>
           <div className="handoff-content">
-            <p>Player 2 に端末を渡してください</p>
+            <p>
+              {showHandoff === 'pre1'
+                ? 'Player 1 が罠を配置します'
+                : 'Player 2 に端末を渡してください'}
+            </p>
             <button onClick={handleHandoffDismiss}>準備OK</button>
           </div>
         </div>

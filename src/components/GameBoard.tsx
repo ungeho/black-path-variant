@@ -27,6 +27,7 @@ export function GameBoard({ state, onMove, onUndo, onPlaceTrap, onRemoveTrap, on
 
   // ── Selected cell for tile picker ──
   const [selectedCell, setSelectedCell] = useState<CellCoord | null>(null);
+  const [trapWarning, setTrapWarning] = useState<string | null>(null);
 
   // Set of legal cell keys.
   const legalCellSet = useMemo(() => {
@@ -175,8 +176,9 @@ export function GameBoard({ state, onMove, onUndo, onPlaceTrap, onRemoveTrap, on
     return null;
   }, [state]);
 
-  // Compute own traps set for display (only show current viewing player's traps).
+  // Show own traps only during the trapping phase (to avoid leaking info in local PvP).
   const ownTrapMap = useMemo(() => {
+    if (!isTrapping) return new Map<string, TileType>();
     const map = new Map<string, TileType>();
     const player = viewingPlayer ?? state.currentPlayer;
     for (const trap of state.traps) {
@@ -185,7 +187,7 @@ export function GameBoard({ state, onMove, onUndo, onPlaceTrap, onRemoveTrap, on
       }
     }
     return map;
-  }, [state.traps, state.currentPlayer, viewingPlayer]);
+  }, [state.traps, state.currentPlayer, viewingPlayer, isTrapping]);
 
   // Build cell elements.
   const cells = [];
@@ -290,15 +292,27 @@ export function GameBoard({ state, onMove, onUndo, onPlaceTrap, onRemoveTrap, on
           )}
         </div>
       </div>
-      {isTrapping && (
+      {isTrapping && onConfirmTraps && (
         <div className={styles.trapBar}>
           <span className={styles.trapInfo}>
             {state.currentPlayer === 'player1' ? 'Player 1' : 'Player 2'} の罠配置
             ({state.traps.filter((t) => t.placedBy === state.currentPlayer).length} / {state.trapLimit})
           </span>
-          <button className={styles.trapConfirm} onClick={onConfirmTraps}>
+          <button
+            className={styles.trapConfirm}
+            onClick={() => {
+              const placed = state.traps.filter((t) => t.placedBy === state.currentPlayer).length;
+              if (placed < state.trapLimit) {
+                setTrapWarning(`罠をあと${state.trapLimit - placed}個配置してください`);
+                return;
+              }
+              setTrapWarning(null);
+              onConfirmTraps?.();
+            }}
+          >
             確定
           </button>
+          {trapWarning && <span className={styles.trapWarning}>{trapWarning}</span>}
         </div>
       )}
       {/* Backdrop to close picker on outside click */}

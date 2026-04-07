@@ -1,0 +1,169 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 280px;
+  justify-content: center;
+}
+
+.turnIndicator {
+  font-weight: 700;
+}
+
+.myTurn {
+  color: var(--accent);
+}
+
+.timer {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.timerUrgent {
+  color: #e74c3c;
+  animation: blink 0.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.disconnected {
+  font-size: 0.7rem;
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.roomInfo {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+/* ─── Trapping phase ─────────────────────────────────── */
+
+.trapStatus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.trapStatusText {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.trapConfirmButton {
+  padding: 8px 24px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.trapConfirmButton:hover {
+  opacity: 0.85;
+}
+
+.trapWaiting {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.trapWarningText {
+  font-size: 0.75rem;
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* ─── Result overlay ──────────────────────────────────── */
+
+.resultOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(3px);
+}
+
+.resultCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resultTitle {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.resultWin {
+  color: var(--accent);
+}
+
+.resultLose {
+  color: #e74c3c;
+}
+
+.resultActions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.resultButton {
+  padding: 8px 24px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.resultLeaveButton {
+  padding: 8px 24px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-light);
+  color: var(--text);
+  cursor: pointer;
+}
