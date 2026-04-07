@@ -5,6 +5,7 @@ import { GameBoard } from './components/GameBoard';
 import { HUD } from './components/HUD';
 import { ControlPanel } from './components/ControlPanel';
 import { HelpModal } from './components/HelpModal';
+import { RulesPanel } from './components/RulesPanel';
 import { Lobby, WaitingScreen } from './components/Lobby';
 import { RoomLobby } from './components/RoomLobby';
 import { OnlineGame } from './components/OnlineGame';
@@ -511,6 +512,7 @@ export default function App() {
       <h1 className="title">Black Path Game</h1>
       {mode === 'online' ? (
         <div className="main-layout">
+          <RulesPanel />
           <div className="board-area">
             {renderOnlineContent()}
           </div>
@@ -540,6 +542,7 @@ export default function App() {
         </div>
       ) : (
         <div className="main-layout">
+          <RulesPanel />
           <div className="board-area">
             <HUD
               state={replayState ?? displayState}

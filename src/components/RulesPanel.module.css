@@ -1,0 +1,149 @@
+.panel {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.toggle:hover {
+  background: var(--surface-light);
+}
+
+.toggleIcon {
+  font-size: 0.6rem;
+}
+
+.toggleLabel {
+  letter-spacing: 1px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 4px 0;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* ─── Section ─── */
+
+.section {
+  border-bottom: 1px solid var(--border);
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.sectionHeader:hover {
+  background: var(--surface-light);
+}
+
+.sectionArrow {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  width: 10px;
+}
+
+.sectionTitle {
+  color: var(--accent);
+}
+
+.sectionBody {
+  padding: 0 12px 10px 28px;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.sectionBody p {
+  margin: 0;
+}
+
+.sectionBody ol,
+.sectionBody ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.sectionBody li {
+  margin-bottom: 2px;
+}
+
+.sectionBody strong {
+  color: var(--text);
+}
+
+.sectionBody dl {
+  margin: 0;
+}
+
+.sectionBody dt {
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 4px;
+}
+
+.sectionBody dd {
+  margin: 1px 0 0 0;
+}
+
+.sectionBody kbd {
+  display: inline-block;
+  padding: 0 4px;
+  font-size: 0.65rem;
+  font-family: inherit;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  margin: 0 1px;
+}
+
+.keyPoint {
+  color: var(--accent);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    display: none;
+  }
+}
