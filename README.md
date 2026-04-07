@@ -48,15 +48,17 @@ Truchet タイルを交互に置いて道を延ばし、相手を盤外に追い
 
 ### ゲームモード
 
-- **対人戦 (PvP)** — ローカル 2 人対戦
 - **vs AI (PvE)** — 3 段階の AI と対戦
   - **Easy** — ランダム手
   - **Medium** — 固定深さ 6 のミニマックス探索
   - **Hard** — 反復深化 + アルファベータ枝刈り（3 秒の思考時間）
+- **オンライン対戦** — Firebase Realtime Database を使ったリアルタイム対戦
+  - ルーム作成 → 招待 URL を相手に共有 → 対戦開始
+  - ホストがゲーム設定（盤面サイズ、罠、制限時間など）を変更可能
 
 ### 先手/後手選択
 
-PvE モードでは先手・後手を選べます。
+vs AI モードでは先手・後手を選べます。
 
 ### 盤面サイズ
 
@@ -64,7 +66,7 @@ PvE モードでは先手・後手を選べます。
 
 ### 制限時間
 
-1 手あたりの制限時間を **なし / 10s / 20s / 30s / 60s** から設定できます。
+1 手あたりの制限時間を **なし / 3s / 5s / 7s / 9s** から設定できます。
 残り 5 秒以下になると赤くパルスし、警告音が鳴ります。
 時間切れで自動的に負けになります。
 
@@ -122,6 +124,9 @@ Black Path Game
 | スタイリング | CSS Modules + CSS Custom Properties |
 | 描画 | SVG（タイル・パス・矢印） |
 | サウンド | Web Audio API（合成音、音声ファイル不要） |
+| オンライン対戦 | Firebase Realtime Database |
+| ホスティング | Firebase Hosting |
+| CI/CD | GitHub Actions（main push で自動デプロイ） |
 | 永続化 | localStorage（戦績記録） |
 | AI | ミニマックス + アルファベータ枝刈り + 反復深化 |
 
@@ -136,6 +141,7 @@ src/
 │   ├── engine.ts          # 状態生成、手の適用、終了判定
 │   ├── moveGenerator.ts   # 合法手の列挙
 │   ├── ai.ts              # AI（Easy/Medium/Hard）
+│   ├── seededRandom.ts    # シード付き PRNG（盤面同期用）
 │   ├── index.ts           # 公開 API
 │   └── __tests__/         # ユニットテスト
 ├── components/            # UI コンポーネント
@@ -145,8 +151,17 @@ src/
 │   ├── HUD.tsx            # ステータスバー + 結果カード + リプレイ
 │   ├── ControlPanel.tsx   # 設定パネル（モード, AI, 盤面サイズ, etc.）
 │   ├── HelpModal.tsx      # ルール説明モーダル
+│   ├── Lobby.tsx          # オンライン対戦ロビー + 待機画面
+│   ├── RoomLobby.tsx      # ルーム設定画面（ホスト/ゲスト）
+│   ├── OnlineGame.tsx     # オンライン対戦画面
 │   └── tileSvg.ts         # SVG ヘルパー（円弧パス生成）
+├── firebase/
+│   ├── config.ts          # Firebase 初期化
+│   └── roomService.ts     # ルーム CRUD・リアルタイムリスナー
 ├── hooks/
+│   ├── useRoom.ts         # ルームライフサイクル管理
+│   ├── useOnlineGame.ts   # オンライン対戦ステート同期
+│   ├── useServerTime.ts   # サーバー時刻オフセット
 │   ├── useRecord.ts       # 戦績の永続化
 │   └── useSound.ts        # Web Audio API サウンド
 ├── App.tsx                # アプリルート（状態管理）
