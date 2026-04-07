@@ -157,19 +157,20 @@
   font-variant-numeric: tabular-nums;
 }
 
-.copyButton {
-  padding: 4px 10px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface-light);
-  color: var(--text-muted);
+.copyUrlButton {
+  padding: 10px 24px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
   cursor: pointer;
+  transition: opacity 0.15s;
 }
 
-.copyButton:hover {
-  background: var(--border);
+.copyUrlButton:hover {
+  opacity: 0.85;
 }
 
 .waitingHint {

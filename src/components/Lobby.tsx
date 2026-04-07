@@ -71,8 +71,14 @@ interface WaitingScreenProps {
 }
 
 export function WaitingScreen({ roomCode, onCancel }: WaitingScreenProps) {
-  const handleCopy = () => {
-    navigator.clipboard.writeText(roomCode);
+  const [copied, setCopied] = useState(false);
+
+  const roomUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
+
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(roomUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -80,11 +86,11 @@ export function WaitingScreen({ roomCode, onCancel }: WaitingScreenProps) {
       <div className={styles.lobbyTitle}>対戦相手を待っています</div>
       <div className={styles.roomCodeDisplay}>
         <span className={styles.roomCode}>{roomCode}</span>
-        <button className={styles.copyButton} onClick={handleCopy}>
-          コピー
-        </button>
       </div>
-      <div className={styles.waitingHint}>このコードを相手に共有してください</div>
+      <button className={styles.copyUrlButton} onClick={handleCopyUrl}>
+        {copied ? 'コピーしました!' : '招待URLをコピー'}
+      </button>
+      <div className={styles.waitingHint}>URLを相手に送ってください</div>
       <button className={styles.backButton} onClick={onCancel}>
         キャンセル
       </button>

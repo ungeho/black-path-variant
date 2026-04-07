@@ -102,8 +102,26 @@ function createAppState(boardSize?: number | null, missingCount?: number, trapLi
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, null, createAppState);
-  const [mode, setMode] = useState<GameMode>('pvp');
   const room = useRoom();
+
+  // Check URL for ?room=XXXX parameter on mount.
+  const urlRoomCode = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('room');
+  }, []);
+
+  const [mode, setMode] = useState<GameMode>(urlRoomCode ? 'online' : 'pvp');
+  const [urlJoinAttempted, setUrlJoinAttempted] = useState(false);
+
+  // Auto-join room from URL parameter.
+  useEffect(() => {
+    if (urlRoomCode && !urlJoinAttempted && room.phase === 'idle') {
+      setUrlJoinAttempted(true);
+      // Clear the URL parameter without reload.
+      window.history.replaceState({}, '', window.location.pathname);
+      room.join(urlRoomCode);
+    }
+  }, [urlRoomCode, urlJoinAttempted, room]);
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [playerSide, setPlayerSide] = useState<PlayerSide>('first');
   const [turnTimeLimit, setTurnTimeLimit] = useState<TurnTimeLimit>(0);
