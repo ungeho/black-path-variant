@@ -99,3 +99,18 @@
   border-bottom: none;
   padding-bottom: 0;
 }
+
+.featureList {
+  margin: 4px 0 0;
+}
+
+.featureList dt {
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 6px;
+}
+
+.featureList dd {
+  margin: 2px 0 0 16px;
+  color: var(--text-muted);
+}

@@ -146,9 +146,20 @@ export function HUD({ state, aiThinking, turnRemaining, aiPlayer, record, onRest
               {playerLabel(currentPlayer, aiPlayer)}
             </span>
             <span className={styles.turnHint}>
-              {phase === 'trapping' ? '罠を配置' : phase === 'opening' ? '最初の一手' : 'の番'}
+              {phase === 'trapping'
+                ? '罠を配置'
+                : phase === 'opening'
+                  ? '最初の一手'
+                  : 'の番'}
             </span>
           </div>
+          <span className={styles.guideText}>
+            {aiThinking
+              ? ''
+              : phase === 'trapping'
+                ? '空きマスをクリックして罠を配置 → 確定ボタン'
+                : '光っているマスをクリック → タイルを選択'}
+          </span>
           {aiThinking && (
             <div className={styles.thinking}>
               <span className={styles.spinner} />

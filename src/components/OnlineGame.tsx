@@ -126,6 +126,13 @@ export function OnlineGame({ roomCode, roomData, localPlayer, onLeave }: OnlineG
           <span className={styles.disconnected}>相手が切断しました</span>
         )}
       </div>
+      {!isFinished && (
+        <div className={styles.guideText}>
+          {isMyTurn
+            ? '光っているマスをクリック → タイルを選んで道を延ばす'
+            : '相手がタイルを置くのを待っています...'}
+        </div>
+      )}
 
       <GameBoard
         state={gameState}

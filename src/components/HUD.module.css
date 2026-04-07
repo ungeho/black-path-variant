@@ -58,6 +58,13 @@
   color: var(--text-muted);
 }
 
+.guideText {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
 /* ─── AI thinking indicator ─── */
 
 .thinking {
