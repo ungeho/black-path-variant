@@ -28,7 +28,6 @@ interface ControlPanelProps {
 }
 
 const MODE_LABELS: Record<GameMode, string> = {
-  pvp: '対人戦',
   pve: 'vs AI',
   online: 'オンライン',
 };

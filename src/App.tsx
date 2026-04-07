@@ -13,7 +13,7 @@ import { useRecord } from './hooks/useRecord';
 import { useSound } from './hooks/useSound';
 import './App.css';
 
-export type GameMode = 'pvp' | 'pve' | 'online';
+export type GameMode = 'pve' | 'online';
 export type PlayerSide = 'first' | 'second';
 
 /** Delay (ms) between each auto-follow step in the animation. */
@@ -110,7 +110,7 @@ export default function App() {
     return params.get('room');
   }, []);
 
-  const [mode, setMode] = useState<GameMode>(urlRoomCode ? 'online' : 'pvp');
+  const [mode, setMode] = useState<GameMode>(urlRoomCode ? 'online' : 'pve');
   const [urlJoinAttempted, setUrlJoinAttempted] = useState(false);
 
   // Auto-join room from URL parameter.
@@ -128,7 +128,6 @@ export default function App() {
   const [boardSizeOption, setBoardSizeOption] = useState<BoardSizeOption>(8);
   const [missingCountOption, setMissingCountOption] = useState(0);
   const [trapLimitOption, setTrapLimitOption] = useState(0);
-  const [showHandoff, setShowHandoff] = useState<Player | 'pre1' | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [replayMoves, setReplayMoves] = useState<Move[] | null>(null);
   const [replayStep, setReplayStep] = useState(0);
@@ -143,7 +142,7 @@ export default function App() {
     : null;
 
   // ── Record results ──
-  const recordKey = mode === 'pve' ? `pve-${aiDifficulty}` : 'pvp';
+  const recordKey = `pve-${aiDifficulty}`;
   const record = getRecord(recordKey);
 
   const prevPhaseRef = useRef(gameState.phase);
@@ -368,13 +367,7 @@ export default function App() {
     setReplayPlaying(false);
     const opts = restartOpts();
     dispatch(opts);
-    // Show pre-handoff for P1 if trapping is enabled in PvP.
-    if ((opts.trapLimit ?? 0) > 0 && mode === 'pvp') {
-      setShowHandoff('pre1');
-    } else {
-      setShowHandoff(null);
-    }
-  }, [restartOpts, mode]);
+  }, [restartOpts]);
   const handleUndo = useCallback(() => {
     if (mode === 'pve' && state.history.length >= 2) {
       dispatch({ type: 'undo' });
@@ -423,12 +416,6 @@ export default function App() {
   }, []);
   const handleConfirmTraps = useCallback(() => {
     dispatch({ type: 'confirmTraps' });
-    if (gameState.currentPlayer === 'player1' && aiPlayer !== 'player2') {
-      setShowHandoff('player2');
-    }
-  }, [gameState.currentPlayer, aiPlayer]);
-  const handleHandoffDismiss = useCallback(() => {
-    setShowHandoff(null);
   }, []);
 
   // ── Online handlers ──
@@ -597,18 +584,6 @@ export default function App() {
             muted={sound.muted}
             onToggleMute={sound.toggleMute}
           />
-        </div>
-      )}
-      {showHandoff !== null && (
-        <div className="handoff-overlay" onClick={handleHandoffDismiss}>
-          <div className="handoff-content">
-            <p>
-              {showHandoff === 'pre1'
-                ? 'Player 1 が罠を配置します'
-                : 'Player 2 に端末を渡してください'}
-            </p>
-            <button onClick={handleHandoffDismiss}>準備OK</button>
-          </div>
         </div>
       )}
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
