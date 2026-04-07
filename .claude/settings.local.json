@@ -15,7 +15,20 @@
       "Bash(netstat -ano)",
       "Bash(firebase login:*)",
       "Bash(firebase login:ci:*)",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "Bash(firebase hosting:channel:deploy test --expires 1m --project black-path-game)",
+      "Bash(gh secret:*)",
+      "Bash(where gh.exe)",
+      "Bash(curl -s -H \"Accept: application/vnd.github.v3+json\" \"https://api.github.com/repos/ungeho/black-path-variant/actions/runs?per_page=1\")",
+      "Bash(curl -s -H \"Accept: application/vnd.github.v3+json\" \"https://api.github.com/repos/ungeho/black-path-variant/actions/runs/24061802024\")",
+      "Bash(curl -s -H \"Accept: application/vnd.github.v3+json\" \"https://api.github.com/repos/ungeho/black-path-variant/actions/runs/24061802024/jobs\")",
+      "Bash(python3 -c ':*)",
+      "Bash(npm ci:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(reg query:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc.CMD --noEmit)"
     ]
   }
 }
