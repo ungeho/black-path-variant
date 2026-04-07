@@ -21,20 +21,24 @@
 }
 
 .turnIndicator {
+  font-size: 1.1rem;
   font-weight: 700;
 }
 
 .myTurn {
-  color: var(--accent);
+  color: #f5c542;
 }
 
 .timer {
+  font-size: 1.5rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
+  color: #f5c542;
 }
 
 .timerUrgent {
   color: #e74c3c;
+  font-size: 1.8rem;
   animation: blink 0.5s ease-in-out infinite;
 }
 
@@ -79,9 +83,9 @@
 }
 
 .trapStatusText {
-  font-size: 0.8rem;
-  color: var(--text);
-  font-weight: 600;
+  font-size: 1rem;
+  color: #f5c542;
+  font-weight: 700;
 }
 
 .trapConfirmButton {
@@ -101,8 +105,9 @@
 }
 
 .trapWaiting {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.9rem;
+  color: #f5c542;
+  font-weight: 600;
   font-style: italic;
 }
 
